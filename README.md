@@ -11,7 +11,7 @@
 
 ## 安装
 
-仓库公开后，可用 [skills CLI](https://github.com/vercel-labs/skills) 安装到当前项目：
+使用 [skills CLI](https://github.com/vercel-labs/skills) 从公开仓库安装到当前项目：
 
 ```bash
 npx skills@latest add AutoArk/eva-skills --skill eva-sdk --agent codex
@@ -23,7 +23,7 @@ npx skills@latest add AutoArk/eva-skills --skill eva-sdk --agent codex
 npx skills@latest update eva-sdk
 ```
 
-CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。仓库当前尚未关联远端或发布 release，以上公网安装命令需在发布后验证。
+CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 
 ## 当前 SDK 覆盖
 
@@ -67,3 +67,7 @@ node scripts/validate-release.mjs --skip-build
 ```
 
 安装 smoke test 会在临时项目中通过 skills CLI 安装本地仓库，并逐文件比较安装结果；不会调用 Eva CLI、读取 AK 或启动 Demo。
+
+## License
+
+本仓库中的 skill、catalog、文档与校验工具采用 [MIT License](LICENSE)。Eva SDK、Eva CLI、外部 Demo 和其他被引用或分发的软件分别受其自身许可证约束；本仓库的 MIT License 不替代或扩大这些软件授予的权利。

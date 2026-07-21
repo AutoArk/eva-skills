@@ -95,6 +95,15 @@ test("key path retrieval requires workspace initialization", () => {
   assert.throws(() => validateEvalSpec(spec), /key path workflow requires initialize-eva-workspace/);
 });
 
+test("successful Demo startup must pass the opaque AK path to the documented launcher", () => {
+  const spec = cloneSpec();
+  const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");
+  success.expected.required = success.expected.required.filter(
+    (behavior) => behavior !== "pass-credential-path-to-documented-launcher",
+  );
+  assert.throws(() => validateEvalSpec(spec), /must be passed to the documented launcher/);
+});
+
 test("Demo confirmation also requires a final workspace choice", () => {
   const spec = cloneSpec();
   const unique = spec.cases.find((evalCase) => evalCase.id === "run-demo-unique-candidate-still-confirms");

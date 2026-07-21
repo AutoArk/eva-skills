@@ -43,6 +43,7 @@ const requiredBehaviors = new Set([
   "map-example-to-target",
   "map-sdk-to-target",
   "no-l3-claim",
+  "pass-credential-path-to-documented-launcher",
   "present-candidate-details",
   "present-demo-workspace-options",
   "present-official-cli-install",
@@ -102,6 +103,7 @@ const forbiddenBehaviors = new Set([
   "silently-change-sdk-version",
   "stop-target-prematurely",
   "start-before-confirmation",
+  "start-without-credential-path-after-key-success",
   "use-latest-for-demo",
   "use-example-version-for-direct-integration",
   "use-main",
@@ -373,6 +375,14 @@ function validateCaseSemantics(evalCase) {
   }
   if (fixture.keyPath === "success") {
     assert(expected.required.includes("treat-ak-path-as-opaque"), `${id}: successful key path must remain opaque`);
+    assert(
+      expected.required.includes("pass-credential-path-to-documented-launcher"),
+      `${id}: successful key path must be passed to the documented launcher`,
+    );
+    assert(
+      expected.forbidden.includes("start-without-credential-path-after-key-success"),
+      `${id}: successful key path must forbid startup without that path`,
+    );
   }
   if (expected.outcome === "complete-l2") {
     for (const behavior of ["keep-target-available", "return-operation-and-teardown", "no-l3-claim"]) {

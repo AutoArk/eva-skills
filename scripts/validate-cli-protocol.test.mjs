@@ -37,6 +37,21 @@ test("requires both Demo destination choices", () => {
   assert.throws(() => validateCliProtocol(documents), /user-selected directory/);
 });
 
+test("requires the retrieved AK path to reach the documented Demo launcher", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace("取得路径不等于流程完成", "取得路径后继续");
+  assert.throws(() => validateCliProtocol(documents), /must bind a successful path to its consumer/);
+});
+
+test("retrieves and binds the credential path only after build checks", () => {
+  const documents = cloneDocuments();
+  documents.runDemo = documents.runDemo
+    .replace("依次运行当前生态适用的静态检查", "__BUILD_STEP__")
+    .replace("完整读取并执行 [cli.md](cli.md)", "依次运行当前生态适用的静态检查")
+    .replace("__BUILD_STEP__", "完整读取并执行 [cli.md](cli.md)");
+  assert.throws(() => validateCliProtocol(documents), /retrieve the credential path after build checks/);
+});
+
 test("rejects exact CLI command duplication outside cli.md", () => {
   const documents = cloneDocuments();
   documents.runDemo += "\nRun `eva whoami` before continuing.\n";

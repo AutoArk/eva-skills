@@ -119,6 +119,7 @@
           "initialize-eva-workspace",
           "run-eva-key-path-in-workspace",
           "treat-ak-path-as-opaque",
+          "pass-credential-path-to-documented-launcher",
           "build-and-typecheck",
           "keep-target-available",
           "return-operation-and-teardown",
@@ -135,6 +136,7 @@
           "overwrite-nonempty-demo-workspace",
           "restore-dependencies-before-confirmation",
           "start-before-confirmation",
+          "start-without-credential-path-after-key-success",
           "stop-target-prematurely",
           "claim-l3"
         ]

@@ -68,6 +68,28 @@ export function validateCliProtocol(documents) {
   assert(documents.runDemo.includes("任务专属临时目录"), "run-demo must offer a task temp directory");
   assert(documents.runDemo.includes("用户给出的明确目标目录"), "run-demo must offer a user-selected directory");
   assert(documents.runDemo.includes("不得覆盖非空目录"), "run-demo must protect non-empty destinations");
+  assert(documents.cli.includes("取得路径不等于流程完成"), "CLI protocol must bind a successful path to its consumer");
+  assert(
+    documents.cli.includes("不得改用不携带该路径的普通启动入口"),
+    "CLI protocol must forbid dropping the path before startup",
+  );
+  assert(
+    documents.runDemo.includes("凭证路径启动入口") && documents.runDemo.includes("同一个不透明路径值"),
+    "run-demo must bind the opaque path to the documented credential launcher",
+  );
+  assert(
+    documents.runDemo.includes("其他入口启动的健康进程不能作为 L2"),
+    "run-demo L2 must reject a healthy process started without the credential path",
+  );
+
+  const demoBuild = documents.runDemo.indexOf("依次运行当前生态适用的静态检查");
+  const demoCli = documents.runDemo.indexOf("完整读取并执行 [cli.md](cli.md)", demoBuild + 1);
+  const demoBind = documents.runDemo.indexOf("同一个不透明路径值", demoCli + 1);
+  const demoStart = documents.runDemo.indexOf("按 example 的凭证路径启动入口启动目标", demoBind + 1);
+  assert(demoBuild >= 0, "run-demo must complete build checks before retrieving the credential path");
+  assert(demoCli > demoBuild, "run-demo must retrieve the credential path after build checks");
+  assert(demoBind > demoCli, "run-demo must bind the credential path immediately after CLI retrieval");
+  assert(demoStart > demoBind, "run-demo must pass the bound credential path into startup");
 
   const firstWhoami = documents.cli.indexOf("`eva whoami`");
   const login = documents.cli.indexOf("`eva login`", firstWhoami + 1);

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sdks": [
+    {
+      "id": "client-sdk-typescript",
+      "sdkFamily": "client-sdk",
+      "language": "ts",
+      "platforms": [
+        "browser"
+      ],
+      "status": "published",
+      "description": "Eva 端侧 TypeScript SDK（契约驱动、浏览器优先）。",
+      "distribution": {
+        "ecosystem": "npm",
+        "package": "@autoark-ai/eva-client-sdk-ts",
+        "defaultChannel": "latest",
+        "publicUrl": "https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts"
+      },
+      "documentation": [
+        {
+          "kind": "package-readme",
+          "url": "https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts?activeTab=readme"
+        }
+      ]
+    }
+  ]
+}

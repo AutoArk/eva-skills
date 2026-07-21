@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "eva-sdk-examples",
+      "purpose": "examples-catalog",
+      "kind": "git",
+      "repository": "https://github.com/AutoArk/eva-sdk-examples.git",
+      "ref": "0.0.1",
+      "commit": "ced3604d7ac1d694a4dda9d4b3da8124357f1439",
+      "paths": {
+        "catalog": "examples.json"
+      }
+    }
+  ]
+}

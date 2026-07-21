@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Deterministic validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run unit tests
+        run: node --test scripts/*.test.mjs
+
+      - name: Validate eval catalog
+        run: node scripts/validate-evals.mjs
+
+      - name: Validate CLI protocol ownership
+        run: node scripts/validate-cli-protocol.mjs
+
+      - name: Validate SDK catalog
+        run: node scripts/validate-sdk-catalog.mjs
+
+  install-smoke:
+    name: Install through skills CLI
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install local skill and compare output
+        run: node scripts/smoke-install-skill.mjs
+
+  live-sources:
+    name: Validate live public sources
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Resolve SDK default channels
+        run: node scripts/validate-sdk-catalog.mjs --live
+
+      - name: Validate pinned Demo release
+        run: node scripts/validate-release.mjs --skip-build

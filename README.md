@@ -15,19 +15,19 @@
 先查看仓库中可安装的 skills：
 
 ```bash
-npx skills@latest add AutoArk/eva-skills --list
+npx skills add AutoArk/eva-skills --list
 ```
 
 安装选定的 skill：
 
 ```bash
-npx skills@latest add AutoArk/eva-skills --skill <skill-name> --agent codex
+npx skills add AutoArk/eva-skills --skill <skill-name>
 ```
 
 更新已经安装的 skill：
 
 ```bash
-npx skills@latest update <skill-name>
+npx skills update <skill-name>
 ```
 
 当前目录：
@@ -42,7 +42,7 @@ npx skills@latest update <skill-name>
 ### 使用方式
 
 ```bash
-npx skills@latest add AutoArk/eva-skills --skill eva-sdk --agent codex
+npx skills add AutoArk/eva-skills --skill eva-sdk
 ```
 
 CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。

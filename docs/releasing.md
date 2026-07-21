@@ -7,7 +7,7 @@
 - **安装与发现单位是单个 skill**：用户通过 `--skill <name>` 选择要安装的 skill。
 - **版本单位是整个仓库**：`vMAJOR.MINOR.PATCH` tag 固定仓库某个 commit，而不是只给某个 skill 编号。
 - **默认更新通道是 `main`**：未固定 ref 的安装会从默认分支获取 skill。对 `skills/<name>/**` 的修改一旦进入 `main`，用户之后执行 `npx skills update` 就可能取得该修改。
-- **正式发布节点由 tag 和 GitHub Release 共同记录**：tag 提供不可变代码快照，Release 记录变化、验证证据与已知风险。skills.sh 是基于公开来源与安装数据形成的发现入口，不是版本注册表，也没有替代 tag 的独立发布命令。
+- **正式发布节点由 tag 和 GitHub Release 共同记录**：tag 提供不可变代码快照，Release 面向用户说明变化、迁移要求与已知问题。skills.sh 是基于公开来源与安装数据形成的发现入口，不是版本注册表，也没有替代 tag 的独立发布命令。
 
 因此，只允许将已经达到发布质量的 skill 内容合入 `main`。tag 负责标记正式节点，但不负责阻止 `main` 上尚未打 tag 的内容被更新到。
 
@@ -152,20 +152,24 @@ git push origin vX.Y.Z
 
 ## 兼容性与迁移
 
-## 验证证据
-
 ## 已知问题
 ```
 
-“验证证据”要记录实际执行的检查、结果和对应 commit SHA，而不是只写“测试通过”。没有迁移或已知问题时明确写“无”。
+Release Notes 只保留用户需要据此理解和使用新版本的信息，不写测试数量、commit SHA、CI job、构建日志或发布操作过程。没有迁移或已知问题时明确写“无”。
 
-### 10. 发布后验证
+### 10. 保存发布验证记录
+
+发布验证证据与 Release Notes 分开保存。至少保留候选 commit SHA、对应 GitHub Actions 结果、tag 指向检查、公开安装结果，以及适用的人工验收结论。
+
+证据可以留在发布任务、issue 或团队检查记录中；GitHub Actions、commit 和 tag 本身继续作为机器可核对的事实来源。本仓库不强制为每个版本新增 worklog 文件，也不把这些内容复制到面向用户的 Release Notes。
+
+### 11. 发布后验证
 
 从公开仓库执行一次全新安装并确认目标 skill 可发现、可安装：
 
 ```bash
-npx skills@latest add AutoArk/eva-skills --list
-npx skills@latest add AutoArk/eva-skills --skill <skill-name> --agent codex
+npx skills add AutoArk/eva-skills --list
+npx skills add AutoArk/eva-skills --skill <skill-name>
 ```
 
 再检查：
@@ -209,7 +213,8 @@ v0.1.1  修复该问题
 - 工作区干净；
 - `main` 上候选 SHA 的 CI 全部成功；
 - 新 annotated tag 已公开且准确指向候选 SHA；
-- 同名 GitHub Release 已公开并包含变更与验证记录；
+- 同名 GitHub Release 已公开，Release Notes 面向用户说明版本变化、迁移要求和已知问题；
+- 发布验证证据已在 Release Notes 之外保留并可追溯；
 - 从公开仓库全新安装目标 skill 成功；
 - 没有被隐瞒的已知阻断问题。
 

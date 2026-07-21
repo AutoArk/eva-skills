@@ -1,4 +1,4 @@
 interface:
-  display_name: "Eva SDK"
-  short_description: "启动官方 Demo，并接入、定制和验证 Eva SDK 应用"
+  display_name: "EVA SDK"
+  short_description: "启动官方 Demo，并接入、定制和验证 EVA SDK 应用"
   default_prompt: "使用 $eva-sdk 启动匹配的官方 Demo，并指导我接入现有应用。"

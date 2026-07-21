@@ -9,7 +9,7 @@
         "browser"
       ],
       "status": "published",
-      "description": "Eva 端侧 TypeScript SDK（契约驱动、浏览器优先）。",
+      "description": "EVA 端侧 TypeScript SDK（契约驱动、浏览器优先）。",
       "distribution": {
         "ecosystem": "npm",
         "package": "@autoark-ai/eva-client-sdk-ts",

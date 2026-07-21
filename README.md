@@ -1,13 +1,13 @@
-# Eva Skills
+# EVA Skills
 
-面向 Eva SDK 使用者的 agent skill 仓库。当前提供 `eva-sdk`：既能从已发布 SDK 直接接入现有应用，也能在用户确认后定位并运行与本 skill release 固定的官方 Demo。
+用于沉淀 EVA 生态相关 agent skills 的公共仓库，覆盖 SDK、官方 Demo、CLI、应用接入与定制、验证和排障等可复用工作流。当前提供 `eva-sdk`：既能从已发布 SDK 直接接入现有应用，也能在用户确认后定位并运行与本 skill release 固定的官方 Demo。
 
 ## 核心设计
 
 - **SDK catalog 与 Demo catalog 分离**：`sdk-catalog.json` 描述当前可直接接入的公开 SDK；`reference-sources.json` 固定外部 Demo catalog 的 immutable ref/commit。Demo 不是 SDK 接入的前置条件。
 - **先选后执行**：Demo 请求无论只命中一个还是多个候选，都先展示描述和路径，并让用户确认候选及最终目录，避免未来 catalog 扩大后启动错误目标。
 - **语言与工具链无关**：skill 维护路由、边界和完成判定；具体依赖恢复、构建、启动与运行观测由所选发布物、example 和目标平台决定。
-- **AK 路径不透明**：agent 只把 Eva CLI 返回的路径交给公开启动入口，不读取、显示、复制或解析 AK 文件内容。
+- **AK 路径不透明**：agent 只把 EVA CLI 返回的路径交给公开启动入口，不读取、显示、复制或解析 AK 文件内容。
 
 ## 安装
 
@@ -45,7 +45,7 @@ evals/eva-sdk.json           结构化行为案例
 scripts/                     catalog、协议、release 与安装校验
 ```
 
-`references/cli.md` 是 Eva CLI 精确命令和顺序的唯一权威来源；其他运行时文档只链接并执行它，避免同一协议出现多个会漂移的副本。
+`references/cli.md` 是 EVA CLI 精确命令和顺序的唯一权威来源；其他运行时文档只链接并执行它，避免同一协议出现多个会漂移的副本。
 
 ## 本地验证
 
@@ -54,6 +54,7 @@ scripts/                     catalog、协议、release 与安装校验
 ```bash
 node --test scripts/*.test.mjs
 node scripts/validate-evals.mjs
+node scripts/validate-brand-style.mjs
 node scripts/validate-cli-protocol.mjs
 node scripts/validate-sdk-catalog.mjs
 ```
@@ -66,8 +67,8 @@ node scripts/validate-sdk-catalog.mjs --live
 node scripts/validate-release.mjs --skip-build
 ```
 
-安装 smoke test 会在临时项目中通过 skills CLI 安装本地仓库，并逐文件比较安装结果；不会调用 Eva CLI、读取 AK 或启动 Demo。
+安装 smoke test 会在临时项目中通过 skills CLI 安装本地仓库，并逐文件比较安装结果；不会调用 EVA CLI、读取 AK 或启动 Demo。
 
 ## License
 
-本仓库中的 skill、catalog、文档与校验工具采用 [MIT License](LICENSE)。Eva SDK、Eva CLI、外部 Demo 和其他被引用或分发的软件分别受其自身许可证约束；本仓库的 MIT License 不替代或扩大这些软件授予的权利。
+本仓库中的 skill、catalog、文档与校验工具采用 [MIT License](LICENSE)。EVA SDK、EVA CLI、外部 Demo 和其他被引用或分发的软件分别受其自身许可证约束；本仓库的 MIT License 不替代或扩大这些软件授予的权利。

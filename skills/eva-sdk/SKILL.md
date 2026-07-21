@@ -1,10 +1,10 @@
 ---
 name: eva-sdk
-description: 启动官方 Eva Demo，或不运行 Demo、直接选择已发布的 Eva SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；用本地 SDK catalog 路由已发布 SDK，用 release-pinned examples catalog 路由可运行 Demo，不预设具体工具链。
+description: 启动官方 EVA Demo，或不运行 Demo、直接选择已发布的 EVA SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；用本地 SDK catalog 路由已发布 SDK，用 release-pinned examples catalog 路由可运行 Demo，不预设具体工具链。
 license: MIT
 ---
 
-# Eva SDK
+# EVA SDK
 
 把本 skill 当作轻量控制面，而不是某种语言或平台的接入手册。维护两条相互独立的入口：`sdk-catalog.json` 决定哪些 SDK 可直接接入及其官方公网来源；固定 examples catalog 决定哪些 Demo 可运行。Demo 是可选的 executable oracle，不是接入 SDK 的前置条件。
 
@@ -12,7 +12,7 @@ license: MIT
 
 始终遵守以下规则，包括成功、失败、重试和诊断路径：
 
-- 只通过 Eva CLI 为明确的绝对工作目录初始化凭证上下文，并按 [references/cli.md](references/cli.md) 的流程取得 AK 文件路径；成功时只把 CLI 输出当作不透明路径引用。
+- 只通过 EVA CLI 为明确的绝对工作目录初始化凭证上下文，并按 [references/cli.md](references/cli.md) 的流程取得 AK 文件路径；成功时只把 CLI 输出当作不透明路径引用。
 - 绝不读取、显示、复制、解析、搜索、转录或编码 AK 文件内容。不要对它使用 `cat`、`sed`、`grep`、`jq`、`base64`、命令替换、调试日志或等价操作。
 - 不检查 AK 文件的内容、元数据、权限或有效性；不移动、删除、覆盖、改权限或复制该文件。
 - 不要求用户粘贴 AK，不打印由该文件派生的环境或配置，不启用会回显参数或环境的 tracing。
@@ -49,7 +49,7 @@ license: MIT
 
 ## Demo 选择确认
 
-对 `run-demo` 强制设置用户确认 gate。读取 pin、把固定快照拉到任务暂存目录、筛选 catalog 和读取候选说明属于确认前允许的只读动作；最终落盘、任何 Eva CLI 命令、CLI 安装、恢复依赖、构建和启动都必须发生在候选与目录确认后。全局安装 CLI 还需要独立确认。
+对 `run-demo` 强制设置用户确认 gate。读取 pin、把固定快照拉到任务暂存目录、筛选 catalog 和读取候选说明属于确认前允许的只读动作；最终落盘、任何 EVA CLI 命令、CLI 安装、恢复依赖、构建和启动都必须发生在候选与目录确认后。全局安装 CLI 还需要独立确认。
 
 - 用户请求模糊、只给出部分条件或命中多个候选时，展示所有匹配候选并请用户选择。
 - 用户条件明确且只命中一个候选时，也先展示该候选并请用户确认；catalog 当前只有一个记录不等于用户已经选择。
@@ -63,7 +63,7 @@ license: MIT
 ## 选择工作流
 
 - 运行或体验官方 demo：完整读取 [references/run-demo.md](references/run-demo.md) 并执行。
-- 需要安装/登录 Eva CLI、初始化本地工作目录或取得 AK 路径：完整读取 [references/cli.md](references/cli.md) 并执行。
+- 需要安装/登录 EVA CLI、初始化本地工作目录或取得 AK 路径：完整读取 [references/cli.md](references/cli.md) 并执行。
 - 接入现有应用：完整读取 [references/integrate.md](references/integrate.md) 并执行；默认走直接 SDK 路径，只有用户明确选择 Demo 基线时才依赖 example。
 - 修改公开配置、控制、观察面、UI 或正式扩展点：完整读取 [references/customize.md](references/customize.md) 并执行。
 - 简单 API 问答：从 SDK catalog 定位官方发布物并读取公共材料，不强制读取或启动 Demo。

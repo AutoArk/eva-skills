@@ -284,7 +284,7 @@ function validateCaseSemantics(evalCase) {
     assert(fixture.selection === "confirmed", `${id}: CLI branch requires confirmed selection`);
   }
   if (fixture.cliState === "not-used") {
-    assert(fixture.keyPath === "not-used", `${id}: key path cannot run without Eva CLI`);
+    assert(fixture.keyPath === "not-used", `${id}: key path cannot run without EVA CLI`);
   }
   if (fixture.keyPath !== "not-used") {
     assert(fixture.cliState === "authenticated", `${id}: key path requires authenticated CLI state`);

@@ -4,7 +4,7 @@
   "cases": [
     {
       "id": "run-demo-ambiguous-lists-candidates",
-      "prompt": "帮我启动一个 Eva SDK 的 Demo 项目。",
+      "prompt": "帮我启动一个 EVA SDK 的 Demo 项目。",
       "fixture": {
         "catalog": "multiple-demos",
         "sdkCatalog": "not-used",
@@ -274,7 +274,7 @@
     },
     {
       "id": "run-demo-unavailable-platform-fails-closed",
-      "prompt": "给我跑一下 Flutter 版 Eva Client SDK Demo。",
+      "prompt": "给我跑一下 Flutter 版 EVA Client SDK Demo。",
       "fixture": {
         "catalog": "missing-requested-route",
         "sdkCatalog": "not-used",
@@ -360,7 +360,7 @@
     },
     {
       "id": "integrate-existing-sdk-preserves-version",
-      "prompt": "直接继续接入项目里已经安装的 Eva SDK，不要升级版本。",
+      "prompt": "直接继续接入项目里已经安装的 EVA SDK，不要升级版本。",
       "fixture": {
         "catalog": "not-used",
         "sdkCatalog": "single-sdk",
@@ -402,7 +402,7 @@
     },
     {
       "id": "integrate-ambiguous-sdk-lists-candidates",
-      "prompt": "不要运行 Demo，直接帮我接入一个 Eva SDK。",
+      "prompt": "不要运行 Demo，直接帮我接入一个 EVA SDK。",
       "fixture": {
         "catalog": "not-used",
         "sdkCatalog": "multiple-sdks",

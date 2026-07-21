@@ -38,6 +38,9 @@ jobs:
       - name: Validate eval catalog
         run: node scripts/validate-evals.mjs
 
+      - name: Validate EVA brand style
+        run: node scripts/validate-brand-style.mjs
+
       - name: Validate CLI protocol ownership
         run: node scripts/validate-cli-protocol.mjs
 

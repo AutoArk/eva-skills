@@ -16,7 +16,7 @@ test("accepts the repository SDK catalog without stored versions", () => {
 
 test("rejects version fields anywhere in an SDK entry", () => {
   const catalog = structuredClone(loadSdkCatalog());
-  catalog.sdks[0].distribution.version = "0.0.3-dev";
+  catalog.sdks[0].distribution.version = "1.2.3-test.1";
   assert.throws(() => validateSdkCatalog(catalog), /version fields are forbidden/);
 });
 
@@ -28,10 +28,11 @@ test("rejects non-official public URLs", () => {
 
 test("resolves the default channel to an exact registry version", () => {
   const sdk = validateSdkCatalog(loadSdkCatalog())[0];
+  const resolvedVersion = "1.2.3-test.1";
   assert.equal(validateNpmRegistryMetadata(sdk, {
     name: "@autoark-ai/eva-client-sdk-ts",
-    "dist-tags": { latest: "0.0.3-dev", dev: "0.0.3-dev" },
-  }), "0.0.3-dev");
+    "dist-tags": { latest: resolvedVersion },
+  }), resolvedVersion);
   assert.throws(
     () => validateNpmRegistryMetadata(sdk, { name: sdk.distribution.package, "dist-tags": {} }),
     /default channel must resolve/,

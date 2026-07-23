@@ -101,6 +101,7 @@ test("rejects SDK imports that are not declared in package exports", () => {
 function createNpmFixture() {
   const root = mkdtempSync(join(tmpdir(), "eva-release-test-"));
   temporaryRoots.push(root);
+  const fixtureSdkVersion = "1.2.3-test.1";
   const exampleRoot = join(root, "client-sdk", "ts", "demo");
   const sdkRoot = join(exampleRoot, "node_modules", "@autoark-ai", "eva-client-sdk-ts");
   mkdirSync(join(exampleRoot, "src"), { recursive: true });
@@ -127,7 +128,7 @@ function createNpmFixture() {
       "dev:key-file": "node launcher.mjs",
       typecheck: "node --version",
     },
-    dependencies: { "@autoark-ai/eva-client-sdk-ts": "0.0.3-dev" },
+    dependencies: { "@autoark-ai/eva-client-sdk-ts": fixtureSdkVersion },
   };
   const lock = {
     name: "fixture",
@@ -137,11 +138,11 @@ function createNpmFixture() {
       "": {
         name: "fixture",
         version: "0.0.0",
-        dependencies: { "@autoark-ai/eva-client-sdk-ts": "0.0.3-dev" },
+        dependencies: { "@autoark-ai/eva-client-sdk-ts": fixtureSdkVersion },
       },
       "node_modules/@autoark-ai/eva-client-sdk-ts": {
-        version: "0.0.3-dev",
-        resolved: "https://registry.npmjs.org/@autoark-ai/eva-client-sdk-ts/-/eva-client-sdk-ts-0.0.3-dev.tgz",
+        version: fixtureSdkVersion,
+        resolved: `https://registry.npmjs.org/@autoark-ai/eva-client-sdk-ts/-/eva-client-sdk-ts-${fixtureSdkVersion}.tgz`,
       },
     },
   };
@@ -170,8 +171,8 @@ function createReferenceSource() {
     purpose: "examples-catalog",
     kind: "git",
     repository: "https://github.com/AutoArk/eva-sdk-examples.git",
-    ref: "0.0.1",
-    commit: "ced3604d7ac1d694a4dda9d4b3da8124357f1439",
+    ref: "0.0.3",
+    commit: "9437fd633beb75c7c54d4922ea35bd18846bf8eb",
     paths: { catalog: "examples.json" },
   };
 }

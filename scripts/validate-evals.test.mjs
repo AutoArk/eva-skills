@@ -8,6 +8,17 @@ test("accepts the repository eval catalog and its required coverage", () => {
   assert.deepEqual(result, { cases: 13, skill: "eva-sdk" });
 });
 
+test("routes an unbranded voice-conversation Demo request through candidate confirmation", () => {
+  const spec = loadEvalSpec();
+  const voiceDemo = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-unbranded-voice-request-lists-candidates",
+  );
+  assert.match(voiceDemo.prompt, /语音对话\s+demo/i);
+  assert.equal(voiceDemo.expected.route, "run-demo");
+  assert.equal(voiceDemo.fixture.selection, "ambiguous");
+  assert(voiceDemo.expected.required.includes("request-candidate-confirmation"));
+});
+
 test("rejects duplicate case ids", () => {
   const spec = cloneSpec();
   spec.cases[1].id = spec.cases[0].id;
@@ -50,7 +61,9 @@ test("examples workflow resolves the latest stable tag and pins its commit", () 
 
 test("forbids CLI, dependency restore, and startup before candidate confirmation", () => {
   const spec = cloneSpec();
-  const ambiguous = spec.cases.find((evalCase) => evalCase.id === "run-demo-ambiguous-lists-candidates");
+  const ambiguous = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-unbranded-voice-request-lists-candidates",
+  );
   ambiguous.expected.forbidden = ambiguous.expected.forbidden.filter(
     (behavior) => behavior !== "invoke-cli-before-confirmation",
   );

@@ -1,6 +1,6 @@
 ---
 name: eva-sdk
-description: 启动官方 EVA Demo，或不运行 Demo、直接选择已发布的 EVA SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；用本地 SDK catalog 路由已发布 SDK，用官方 examples 仓库的最新稳定 tag 路由可运行 Demo，不预设具体工具链。
+description: 启动官方 EVA Demo，或不运行 Demo、直接选择已发布的 EVA SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 EVA Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；未指定其他产品或框架的“启动语音对话 Demo”请求也适用，明确指向其他产品或框架时不适用。用本地 SDK catalog 路由已发布 SDK，用官方 examples 仓库的最新稳定 tag 路由可运行 Demo，不预设具体工具链。
 license: MIT
 ---
 

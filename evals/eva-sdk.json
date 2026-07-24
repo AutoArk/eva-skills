@@ -3,8 +3,8 @@
   "skill": "eva-sdk",
   "cases": [
     {
-      "id": "run-demo-ambiguous-lists-candidates",
-      "prompt": "帮我启动一个 EVA SDK 的 Demo 项目。",
+      "id": "run-demo-unbranded-voice-request-lists-candidates",
+      "prompt": "帮我启动一个语音对话 demo。",
       "fixture": {
         "catalog": "multiple-demos",
         "sdkCatalog": "not-used",

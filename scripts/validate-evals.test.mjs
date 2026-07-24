@@ -21,13 +21,22 @@ test("rejects literal credentials in prompts or fixtures", () => {
   assert.throws(() => validateEvalSpec(spec), /credential assignment|literal AK value/);
 });
 
-test("requires the AK prohibition set on every success and failure path", () => {
+test("requires the credential prohibition set on every success and failure path", () => {
   const spec = cloneSpec();
   const cliError = spec.cases.find((evalCase) => evalCase.id === "run-demo-key-path-error-does-not-seek-secret");
   cliError.expected.forbidden = cliError.expected.forbidden.filter(
-    (behavior) => behavior !== "read-ak-file",
+    (behavior) => behavior !== "read-dotenv-file",
   );
-  assert.throws(() => validateEvalSpec(spec), /missing core AK prohibition read-ak-file/);
+  assert.throws(() => validateEvalSpec(spec), /missing core AK prohibition read-dotenv-file/);
+});
+
+test("forbids eva key show on every credential path", () => {
+  const spec = cloneSpec();
+  const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");
+  success.expected.forbidden = success.expected.forbidden.filter(
+    (behavior) => behavior !== "run-eva-key-show",
+  );
+  assert.throws(() => validateEvalSpec(spec), /missing core AK prohibition run-eva-key-show/);
 });
 
 test("forbids CLI, dependency restore, and startup before candidate confirmation", () => {
@@ -86,13 +95,31 @@ test("browser login cannot be treated as complete before whoami recheck", () => 
   assert.throws(() => validateEvalSpec(spec), /unauthenticated CLI requires require-whoami-recheck-after-login/);
 });
 
-test("key path retrieval requires workspace initialization", () => {
+test("key setup requires entering the project directory", () => {
   const spec = cloneSpec();
   const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");
   success.expected.required = success.expected.required.filter(
-    (behavior) => behavior !== "initialize-eva-workspace",
+    (behavior) => behavior !== "enter-project-directory",
   );
-  assert.throws(() => validateEvalSpec(spec), /key path workflow requires initialize-eva-workspace/);
+  assert.throws(() => validateEvalSpec(spec), /key save workflow requires enter-project-directory/);
+});
+
+test("missing-key branch requires --no-show-key creation", () => {
+  const spec = cloneSpec();
+  const keyError = spec.cases.find((evalCase) => evalCase.id === "run-demo-key-path-error-does-not-seek-secret");
+  keyError.expected.required = keyError.expected.required.filter(
+    (behavior) => behavior !== "create-eva-key-with-no-show",
+  );
+  assert.throws(() => validateEvalSpec(spec), /missing-key branch must create safely/);
+});
+
+test("existing-key branch forbids creating another key", () => {
+  const spec = cloneSpec();
+  const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");
+  success.expected.forbidden = success.expected.forbidden.filter(
+    (behavior) => behavior !== "create-eva-key-when-existing",
+  );
+  assert.throws(() => validateEvalSpec(spec), /existing-key branch must not create another key/);
 });
 
 test("successful Demo startup must pass the opaque AK path to the documented launcher", () => {

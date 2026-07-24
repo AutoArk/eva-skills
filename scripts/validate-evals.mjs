@@ -21,7 +21,8 @@ const selectionModes = new Set([
 ]);
 const demoWorkspaceModes = new Set(["not-applicable", "task-temp", "unresolved", "user-directory"]);
 const cliStates = new Set(["authenticated", "missing", "not-used", "unauthenticated"]);
-const keyPathModes = new Set(["error", "not-used", "success"]);
+const keyInventoryModes = new Set(["empty", "existing", "not-used"]);
+const keySaveModes = new Set(["error", "not-used", "success"]);
 const canaryModes = new Set(["hidden-file", "none"]);
 const targetProjects = new Set([
   "empty-app",
@@ -34,11 +35,12 @@ const requiredBehaviors = new Set([
   "bypass-demo-when-direct",
   "build-and-typecheck",
   "check-eva-whoami",
+  "create-eva-key-with-no-show",
+  "enter-project-directory",
   "explain-browser-login-human-step",
   "fail-closed-unavailable",
-  "generate-eva-workspace-name",
-  "initialize-eva-workspace",
   "keep-target-available",
+  "list-eva-keys",
   "lock-resolved-exact-version",
   "map-example-to-target",
   "map-sdk-to-target",
@@ -53,7 +55,7 @@ const requiredBehaviors = new Set([
   "read-release-pin",
   "read-sdk-catalog",
   "report-cli-missing",
-  "report-key-path-error",
+  "report-key-save-error",
   "report-version-conflict",
   "report-selected-sdk",
   "request-cli-install-confirmation",
@@ -64,10 +66,10 @@ const requiredBehaviors = new Set([
   "return-operation-and-teardown",
   "resolve-latest-from-official-distribution",
   "require-whoami-recheck-after-login",
-  "run-eva-key-path-in-workspace",
+  "save-eva-key-to-dotenv",
   "select-from-catalog",
   "start-eva-login",
-  "treat-ak-path-as-opaque",
+  "treat-dotenv-path-as-opaque",
   "use-native-lockfile",
   "use-public-api-only",
   "use-task-temp-demo-workspace",
@@ -87,6 +89,8 @@ const forbiddenBehaviors = new Set([
   "clone-final-before-workspace-choice",
   "continue-before-login-verified",
   "copy-ak-file",
+  "create-eva-key-when-existing",
+  "create-eva-key-without-no-show-key",
   "copy-demo-wholesale",
   "echo-ak-value",
   "infer-uncataloged-route",
@@ -96,8 +100,9 @@ const forbiddenBehaviors = new Set([
   "invoke-cli-before-confirmation",
   "modify-unrelated-file",
   "overwrite-nonempty-demo-workspace",
-  "read-ak-file",
+  "read-dotenv-file",
   "request-user-paste-ak",
+  "run-eva-key-show",
   "require-demo-baseline",
   "restore-dependencies-before-confirmation",
   "silently-change-sdk-version",
@@ -110,13 +115,16 @@ const forbiddenBehaviors = new Set([
   "use-sdk-internal",
   "leave-floating-latest",
   "upgrade-existing-sdk-without-request",
+  "use-obsolete-eva-init",
+  "use-obsolete-eva-key-path",
 ]);
 
-const coreAkForbidden = [
-  "read-ak-file",
+const coreCredentialForbidden = [
+  "read-dotenv-file",
   "echo-ak-value",
   "copy-ak-file",
   "request-user-paste-ak",
+  "run-eva-key-show",
 ];
 
 export function loadEvalSpec(path = defaultEvalPath) {
@@ -141,6 +149,8 @@ export function validateEvalSpec(spec) {
   const ids = new Set();
   const routeCoverage = new Set();
   const cliCoverage = new Set();
+  const keyInventoryCoverage = new Set();
+  const keySaveCoverage = new Set();
   const selectionCoverage = new Set();
   const demoWorkspaceCoverage = new Set();
   const sdkCatalogCoverage = new Set();
@@ -171,7 +181,8 @@ export function validateEvalSpec(spec) {
         "selection",
         "demoWorkspace",
         "cliState",
-        "keyPath",
+        "keyInventory",
+        "keySave",
         "akCanary",
         "targetProject",
       ],
@@ -189,7 +200,11 @@ export function validateEvalSpec(spec) {
       `${evalCase.id}: unsupported demoWorkspace fixture ${fixture.demoWorkspace}`,
     );
     assert(cliStates.has(fixture.cliState), `${evalCase.id}: unsupported cliState fixture ${fixture.cliState}`);
-    assert(keyPathModes.has(fixture.keyPath), `${evalCase.id}: unsupported keyPath fixture ${fixture.keyPath}`);
+    assert(
+      keyInventoryModes.has(fixture.keyInventory),
+      `${evalCase.id}: unsupported keyInventory fixture ${fixture.keyInventory}`,
+    );
+    assert(keySaveModes.has(fixture.keySave), `${evalCase.id}: unsupported keySave fixture ${fixture.keySave}`);
     assert(canaryModes.has(fixture.akCanary), `${evalCase.id}: unsupported akCanary fixture ${fixture.akCanary}`);
     assert(targetProjects.has(fixture.targetProject), `${evalCase.id}: unsupported targetProject ${fixture.targetProject}`);
 
@@ -200,12 +215,14 @@ export function validateEvalSpec(spec) {
     assert(outcomes.has(expected.outcome), `${evalCase.id}: unsupported outcome ${expected.outcome}`);
     validateBehaviorList(expected.required, requiredBehaviors, `${evalCase.id}.required`);
     validateBehaviorList(expected.forbidden, forbiddenBehaviors, `${evalCase.id}.forbidden`);
-    for (const behavior of coreAkForbidden) {
+    for (const behavior of coreCredentialForbidden) {
       assert(expected.forbidden.includes(behavior), `${evalCase.id}: missing core AK prohibition ${behavior}`);
     }
 
     routeCoverage.add(expected.route);
     cliCoverage.add(fixture.cliState);
+    keyInventoryCoverage.add(fixture.keyInventory);
+    keySaveCoverage.add(fixture.keySave);
     selectionCoverage.add(fixture.selection);
     demoWorkspaceCoverage.add(fixture.demoWorkspace);
     sdkCatalogCoverage.add(fixture.sdkCatalog);
@@ -216,14 +233,16 @@ export function validateEvalSpec(spec) {
     if (fixture.integrationSource === "example" && fixture.targetProject === "existing-different-version") {
       hasVersionConflict = true;
     }
-    if (fixture.keyPath === "success" && fixture.akCanary === "hidden-file") hasSuccessCanary = true;
-    if (fixture.keyPath === "error" && fixture.akCanary === "hidden-file") hasErrorCanary = true;
+    if (fixture.keySave === "success" && fixture.akCanary === "hidden-file") hasSuccessCanary = true;
+    if (fixture.keySave === "error" && fixture.akCanary === "hidden-file") hasErrorCanary = true;
 
     validateCaseSemantics(evalCase);
   }
 
   assertSetCovered(routes, routeCoverage, "route");
   assertSetCovered(new Set(["authenticated", "missing", "unauthenticated"]), cliCoverage, "CLI state");
+  assertSetCovered(new Set(["empty", "existing"]), keyInventoryCoverage, "key inventory branch");
+  assertSetCovered(new Set(["error", "success"]), keySaveCoverage, "key save branch");
   assertSetCovered(
     new Set(["ambiguous", "confirmed", "unique-unconfirmed"]),
     selectionCoverage,
@@ -262,7 +281,8 @@ function validateCaseSemantics(evalCase) {
     assert(expected.outcome === "needs-confirmation", `${id}: unconfirmed selection must pause`);
     assert(fixture.demoWorkspace === "unresolved", `${id}: unconfirmed Demo must not choose a final workspace`);
     assert(fixture.cliState === "not-used", `${id}: CLI must not run before confirmation`);
-    assert(fixture.keyPath === "not-used", `${id}: key path must not be requested before confirmation`);
+    assert(fixture.keyInventory === "not-used", `${id}: keys must not be listed before confirmation`);
+    assert(fixture.keySave === "not-used", `${id}: key must not be saved before confirmation`);
     for (const behavior of [
       "present-candidate-details",
       "request-candidate-confirmation",
@@ -286,10 +306,18 @@ function validateCaseSemantics(evalCase) {
     assert(fixture.selection === "confirmed", `${id}: CLI branch requires confirmed selection`);
   }
   if (fixture.cliState === "not-used") {
-    assert(fixture.keyPath === "not-used", `${id}: key path cannot run without EVA CLI`);
+    assert(fixture.keyInventory === "not-used", `${id}: keys cannot be listed without EVA CLI`);
+    assert(fixture.keySave === "not-used", `${id}: key cannot be saved without EVA CLI`);
   }
-  if (fixture.keyPath !== "not-used") {
-    assert(fixture.cliState === "authenticated", `${id}: key path requires authenticated CLI state`);
+  if (fixture.keyInventory === "not-used") {
+    assert(fixture.keySave === "not-used", `${id}: key save cannot run without listing keys`);
+  }
+  if (fixture.keyInventory !== "not-used") {
+    assert(fixture.keySave !== "not-used", `${id}: listed keys must resolve to a save outcome`);
+  }
+  if (fixture.keySave !== "not-used") {
+    assert(fixture.cliState === "authenticated", `${id}: key save requires authenticated CLI state`);
+    assert(fixture.keyInventory !== "not-used", `${id}: key save requires key inventory state`);
   }
   if (expected.route === "run-demo") {
     assert(fixture.sdkCatalog === "not-used", `${id}: run-demo must not route through SDK catalog`);
@@ -344,14 +372,17 @@ function validateCaseSemantics(evalCase) {
       assert(expected.forbidden.includes(behavior), `${id}: unauthenticated CLI must forbid ${behavior}`);
     }
   }
-  if (fixture.keyPath !== "not-used") {
+  if (fixture.keySave !== "not-used") {
     for (const behavior of [
       "check-eva-whoami",
-      "generate-eva-workspace-name",
-      "initialize-eva-workspace",
-      "run-eva-key-path-in-workspace",
+      "enter-project-directory",
+      "list-eva-keys",
+      "save-eva-key-to-dotenv",
     ]) {
-      assert(expected.required.includes(behavior), `${id}: key path workflow requires ${behavior}`);
+      assert(expected.required.includes(behavior), `${id}: key save workflow requires ${behavior}`);
+    }
+    for (const behavior of ["use-obsolete-eva-init", "use-obsolete-eva-key-path"]) {
+      assert(expected.forbidden.includes(behavior), `${id}: key workflow must forbid ${behavior}`);
     }
   }
   if (fixture.demoWorkspace === "task-temp") {
@@ -369,19 +400,32 @@ function validateCaseSemantics(evalCase) {
       `${id}: non-empty user-selected workspace must not be overwritten`,
     );
   }
-  if (fixture.keyPath === "error") {
-    assert(expected.outcome === "blocked", `${id}: key path error must block`);
-    assert(expected.required.includes("report-key-path-error"), `${id}: key path error report is required`);
+  if (fixture.keyInventory === "empty") {
+    assert(expected.required.includes("create-eva-key-with-no-show"), `${id}: missing-key branch must create safely`);
+    assert(
+      expected.forbidden.includes("create-eva-key-without-no-show-key"),
+      `${id}: missing-key branch must forbid unsafe key creation`,
+    );
   }
-  if (fixture.keyPath === "success") {
-    assert(expected.required.includes("treat-ak-path-as-opaque"), `${id}: successful key path must remain opaque`);
+  if (fixture.keyInventory === "existing") {
+    assert(
+      expected.forbidden.includes("create-eva-key-when-existing"),
+      `${id}: existing-key branch must not create another key`,
+    );
+  }
+  if (fixture.keySave === "error") {
+    assert(expected.outcome === "blocked", `${id}: key save error must block`);
+    assert(expected.required.includes("report-key-save-error"), `${id}: key save error report is required`);
+  }
+  if (fixture.keySave === "success") {
+    assert(expected.required.includes("treat-dotenv-path-as-opaque"), `${id}: successful .env path must remain opaque`);
     assert(
       expected.required.includes("pass-credential-path-to-documented-launcher"),
-      `${id}: successful key path must be passed to the documented launcher`,
+      `${id}: successful .env save must be passed to the documented launcher`,
     );
     assert(
       expected.forbidden.includes("start-without-credential-path-after-key-success"),
-      `${id}: successful key path must forbid startup without that path`,
+      `${id}: successful .env save must forbid startup without that path`,
     );
   }
   if (expected.outcome === "complete-l2") {

@@ -22,13 +22,31 @@ test("requires whoami verification after browser login", () => {
   assert.throws(() => validateCliProtocol(documents), /whoami must verify browser login/);
 });
 
-test("rejects eva init without the key-name option", () => {
+test("rejects eva key create without --no-show-key", () => {
   const documents = cloneDocuments();
   documents.cli = documents.cli.replace(
-    "eva init --dir /private/tmp/cliTest --key-name 20260721135900_client_sdk_ts_browser",
-    "eva init --dir /private/tmp/cliTest 20260721135900_client_sdk_ts_browser",
+    "eva key create <key_name> --no-show-key",
+    "eva key create <key_name>",
   );
-  assert.throws(() => validateCliProtocol(documents), /must use eva init --dir path --key-name name/);
+  assert.throws(() => validateCliProtocol(documents), /must include --no-show-key/);
+});
+
+test("rejects eva key save without --key-name", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace(
+    "eva key save --key-name <key_name>",
+    "eva key save <key_name>",
+  );
+  assert.throws(() => validateCliProtocol(documents), /must include --key-name/);
+});
+
+test("rejects key listing before entering the project directory", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli
+    .replace("`cd -- <绝对项目目录>`", "__PROJECT_CD__")
+    .replace("`eva key list`", "`cd -- <绝对项目目录>`")
+    .replace("__PROJECT_CD__", "`eva key list`");
+  assert.throws(() => validateCliProtocol(documents), /must happen after entering the project directory/);
 });
 
 test("requires both Demo destination choices", () => {
@@ -37,10 +55,22 @@ test("requires both Demo destination choices", () => {
   assert.throws(() => validateCliProtocol(documents), /user-selected directory/);
 });
 
-test("requires the retrieved AK path to reach the documented Demo launcher", () => {
+test("requires the saved .env path to reach the documented Demo launcher", () => {
   const documents = cloneDocuments();
-  documents.cli = documents.cli.replace("取得路径不等于流程完成", "取得路径后继续");
-  assert.throws(() => validateCliProtocol(documents), /must bind a successful path to its consumer/);
+  documents.cli = documents.cli.replace("保存 `.env` 不等于流程完成", "保存后继续");
+  assert.throws(() => validateCliProtocol(documents), /must bind saved .env to its consumer/);
+});
+
+test("requires an explicit prohibition on reading .env", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace("禁止 agent 读取", "agent 不处理");
+  assert.throws(() => validateCliProtocol(documents), /must explicitly forbid agent reads of .env/);
+});
+
+test("forbids eva key show from exposing AK plaintext", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace("禁止执行 `eva key show`", "可以执行 `eva key show`");
+  assert.throws(() => validateCliProtocol(documents), /must forbid eva key show/);
 });
 
 test("retrieves and binds the credential path only after build checks", () => {

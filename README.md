@@ -51,7 +51,7 @@ CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 
 - 直接从已发布 SDK 接入现有应用，不要求先运行 Demo。
 - 根据用户提供的 SDK、语言和平台条件定位候选 Demo，并在用户确认候选及工作目录后执行。
-- 通过 EVA CLI 完成登录状态检查、工作目录初始化和 AK 路径获取；AK 文件内容始终作为不透明凭证处理。
+- 通过 EVA CLI 完成登录状态检查、key 选择或安全创建，并在项目目录保存 `.env`；agent 禁止读取该文件，只把绝对路径传给启动参数。
 - 根据目标发布物、example 和平台选择依赖恢复、构建、运行与验证方式，不把 TypeScript 工具链泛化为所有 SDK 的固定流程。
 
 ### 当前 SDK 覆盖
@@ -78,7 +78,7 @@ skills/<skill-name>/         可安装的 runtime skill
   agents/openai.yaml         UI metadata
   references/               按需加载的执行协议与参考资料
 evals/<skill-name>.json      结构化行为案例
-scripts/                     仓库级校验与安装 smoke test
+scripts/                     仓库级确定性校验与公开来源检查
 docs/                        维护与发布规范
 ```
 
@@ -99,7 +99,6 @@ node scripts/validate-sdk-catalog.mjs
 需要联网的兼容性检查：
 
 ```bash
-node scripts/smoke-install-skill.mjs
 node scripts/validate-sdk-catalog.mjs --live
 node scripts/validate-release.mjs --skip-build
 ```

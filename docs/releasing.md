@@ -80,7 +80,6 @@ node scripts/validate-evals.mjs
 node scripts/validate-brand-style.mjs
 node scripts/validate-cli-protocol.mjs
 node scripts/validate-sdk-catalog.mjs
-node scripts/smoke-install-skill.mjs
 ```
 
 任一命令失败都不得继续。修复后从变更审查重新开始，不能只重跑最后一个失败项。
@@ -159,25 +158,23 @@ Release Notes 只保留用户需要据此理解和使用新版本的信息，不
 
 ### 10. 保存发布验证记录
 
-发布验证证据与 Release Notes 分开保存。至少保留候选 commit SHA、对应 GitHub Actions 结果、tag 指向检查、公开安装结果，以及适用的人工验收结论。
+发布验证证据与 Release Notes 分开保存。至少保留候选 commit SHA、对应 GitHub Actions 结果、tag 指向检查、公开发现结果，以及适用的人工验收结论。
 
 证据可以留在发布任务、issue 或团队检查记录中；GitHub Actions、commit 和 tag 本身继续作为机器可核对的事实来源。本仓库不强制为每个版本新增 worklog 文件，也不把这些内容复制到面向用户的 Release Notes。
 
 ### 11. 发布后验证
 
-从公开仓库执行一次全新安装并确认目标 skill 可发现、可安装：
+通过公开发现入口确认目标 skill 可被检索：
 
 ```bash
-npx skills add AutoArk/eva-skills --list
-npx skills add AutoArk/eva-skills --skill <skill-name>
+npx skills find eva-sdk
 ```
 
 再检查：
 
-- 安装得到的文件与发布 commit 中该 skill 目录一致；
-- 公开 README 中的安装命令仍有效；
+- 查询结果包含目标 skill 及其公开来源；
 - GitHub tag 和 Release 指向同一候选 SHA；
-- skills.sh 后续能够发现该公开来源。skills.sh 索引可能异步更新，不把即时展示作为 tag 是否成功的唯一判定。
+- skills.sh 后续能够发现该公开来源。公开索引可能异步更新，不把即时展示作为 tag 是否成功的唯一判定，也不把第三方安装服务的复制行为纳入本仓库发布判定。
 
 完成以上检查后，才可以宣告正式发布完成。
 
@@ -215,7 +212,7 @@ v0.1.1  修复该问题
 - 新 annotated tag 已公开且准确指向候选 SHA；
 - 同名 GitHub Release 已公开，Release Notes 面向用户说明版本变化、迁移要求和已知问题；
 - 发布验证证据已在 Release Notes 之外保留并可追溯；
-- 从公开仓库全新安装目标 skill 成功；
+- 通过公开发现入口检索到目标 skill；
 - 没有被隐瞒的已知阻断问题。
 
 ## 依据

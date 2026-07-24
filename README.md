@@ -64,7 +64,7 @@ SDK catalog 不保存版本号。新接入默认从官方 distribution 的 `late
 
 ### 设计说明
 
-- `sdk-catalog.json` 描述当前可直接接入的公开 SDK；`reference-sources.json` 维护外部参考来源，其中官方 Demo catalog 固定 immutable ref 和 commit。
+- `sdk-catalog.json` 描述当前可直接接入的公开 SDK；`reference-sources.json` 维护外部参考来源，其中官方 Demo 在每次任务开始时解析最新稳定 SemVer tag，并固定该任务使用的 tag 和 commit。
 - Demo 请求无论只命中一个还是多个候选，都先展示描述和路径，让用户确认候选及最终目录。
 - `references/cli.md` 是 EVA CLI 精确命令和顺序的唯一权威来源，其他运行时文档只负责链接和路由。
 

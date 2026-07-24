@@ -6,8 +6,7 @@
       "purpose": "examples-catalog",
       "kind": "git",
       "repository": "https://github.com/AutoArk/eva-sdk-examples.git",
-      "ref": "0.0.3",
-      "commit": "9437fd633beb75c7c54d4922ea35bd18846bf8eb",
+      "tagPolicy": "latest-stable",
       "paths": {
         "catalog": "examples.json"
       }

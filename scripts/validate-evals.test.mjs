@@ -39,6 +39,15 @@ test("forbids eva key show on every credential path", () => {
   assert.throws(() => validateEvalSpec(spec), /missing core AK prohibition run-eva-key-show/);
 });
 
+test("examples workflow resolves the latest stable tag and pins its commit", () => {
+  const spec = cloneSpec();
+  const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");
+  success.expected.required = success.expected.required.filter(
+    (behavior) => behavior !== "resolve-latest-stable-example-tag",
+  );
+  assert.throws(() => validateEvalSpec(spec), /examples workflow requires resolve-latest-stable-example-tag/);
+});
+
 test("forbids CLI, dependency restore, and startup before candidate confirmation", () => {
   const spec = cloneSpec();
   const ambiguous = spec.cases.find((evalCase) => evalCase.id === "run-demo-ambiguous-lists-candidates");

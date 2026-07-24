@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, test } from "node:test";
 
 import {
+  selectLatestStableTag,
   selectReferenceSource,
   validateCatalog,
   validateInstalledPublicImports,
@@ -31,10 +32,13 @@ test("accepts an extensible registry and selects the examples catalog by purpose
   assert.deepEqual(selectReferenceSource(registry, "examples-catalog"), createReferenceSource());
 });
 
-test("rejects branch refs and unapproved repositories", () => {
+test("requires the latest-stable tag policy and official repository", () => {
   assert.throws(
-    () => validateReferenceSources({ schemaVersion: 1, sources: [{ ...createReferenceSource(), ref: "main" }] }),
-    /immutable tag/,
+    () => validateReferenceSources({
+      schemaVersion: 1,
+      sources: [{ ...createReferenceSource(), tagPolicy: "main" }],
+    }),
+    /tagPolicy must be latest-stable/,
   );
   assert.throws(
     () => validateReferenceSources({
@@ -42,6 +46,17 @@ test("rejects branch refs and unapproved repositories", () => {
       sources: [{ ...createReferenceSource(), repository: "https://example.com/mirror.git" }],
     }),
     /official allowlist/,
+  );
+});
+
+test("selects the highest stable numeric SemVer tag", () => {
+  assert.equal(
+    selectLatestStableTag(["0.0.9", "0.0.10", "0.1.0-beta.1", "v1.0.0", "main", "0.1.0"]),
+    "0.1.0",
+  );
+  assert.throws(
+    () => selectLatestStableTag(["main", "v1.0.0", "1.0.0-rc.1"]),
+    /no stable X.Y.Z tag/,
   );
 });
 
@@ -171,8 +186,7 @@ function createReferenceSource() {
     purpose: "examples-catalog",
     kind: "git",
     repository: "https://github.com/AutoArk/eva-sdk-examples.git",
-    ref: "0.0.3",
-    commit: "9437fd633beb75c7c54d4922ea35bd18846bf8eb",
+    tagPolicy: "latest-stable",
     paths: { catalog: "examples.json" },
   };
 }

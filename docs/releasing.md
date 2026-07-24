@@ -68,7 +68,7 @@ git diff <previous-tag>..HEAD -- skills/ evals/ scripts/ README.md docs/
 
 - 没有凭证、AK 内容、私有地址、个人绝对路径或临时文件；
 - `SKILL.md` frontmatter、目录名和 UI metadata 一致；
-- 外部依赖使用公开入口，要求 immutable ref 的位置同时固定 tag 和 commit；
+- 外部依赖使用公开入口；动态选择稳定 tag 的位置必须在单次验证中解析并记录 tag 和 commit，且不得使用 branch 或 prerelease；
 - skill 文档只包含运行时真正需要的内容，维护说明留在仓库根目录或 `docs/`；
 - 所有展示性文字遵守 EVA 品牌写法，代码标识符和资源名保留真实大小写。
 
@@ -91,7 +91,7 @@ node scripts/validate-sdk-catalog.mjs --live
 node scripts/validate-release.mjs
 ```
 
-`validate-release.mjs` 的正式发布检查不使用 `--skip-build`，需要验证 pinned Demo、恢复依赖并完成构建。
+`validate-release.mjs` 的正式发布检查不使用 `--skip-build`，需要解析官方 examples 最新稳定 tag、记录 commit、恢复依赖并完成构建。
 
 如果本次修改影响 Demo 选择、SDK 接入、EVA CLI、登录、AK 传递或真实运行行为，还必须在全新临时目录进行对应场景验收。`eva login` 会打开浏览器，只有维护者本人参与时才执行；不得把无法自动完成的登录步骤伪装成已验证。
 

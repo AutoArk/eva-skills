@@ -52,7 +52,7 @@ const requiredBehaviors = new Set([
   "present-sdk-candidates",
   "preserve-unrelated-files",
   "preserve-installed-sdk-version",
-  "read-release-pin",
+  "read-example-source-policy",
   "read-sdk-catalog",
   "report-cli-missing",
   "report-key-save-error",
@@ -65,6 +65,7 @@ const requiredBehaviors = new Set([
   "request-sdk-selection",
   "return-operation-and-teardown",
   "resolve-latest-from-official-distribution",
+  "resolve-latest-stable-example-tag",
   "require-whoami-recheck-after-login",
   "save-eva-key-to-dotenv",
   "select-from-catalog",
@@ -75,7 +76,7 @@ const requiredBehaviors = new Set([
   "use-task-temp-demo-workspace",
   "use-user-selected-demo-workspace",
   "verify-empty-demo-destination",
-  "verify-pinned-commit",
+  "pin-resolved-example-commit",
   "wait-for-browser-login",
   "wait-for-cli-install-confirmation",
   "wait-for-demo-workspace-choice",
@@ -109,7 +110,7 @@ const forbiddenBehaviors = new Set([
   "stop-target-prematurely",
   "start-before-confirmation",
   "start-without-credential-path-after-key-success",
-  "use-latest-for-demo",
+  "use-example-prerelease-tag",
   "use-example-version-for-direct-integration",
   "use-main",
   "use-sdk-internal",
@@ -276,6 +277,21 @@ export function validateEvalSpec(spec) {
 function validateCaseSemantics(evalCase) {
   const { fixture, expected, id } = evalCase;
   const awaitsConfirmation = ["ambiguous", "unique-unconfirmed"].includes(fixture.selection);
+  const usesExamples = expected.route === "run-demo" || fixture.integrationSource === "example";
+  if (usesExamples) {
+    for (const behavior of [
+      "read-example-source-policy",
+      "resolve-latest-stable-example-tag",
+      "pin-resolved-example-commit",
+    ]) {
+      assert(expected.required.includes(behavior), `${id}: examples workflow requires ${behavior}`);
+    }
+    assert(expected.forbidden.includes("use-main"), `${id}: examples workflow must forbid main`);
+    assert(
+      expected.forbidden.includes("use-example-prerelease-tag"),
+      `${id}: examples workflow must forbid prerelease tags`,
+    );
+  }
   if (awaitsConfirmation) {
     assert(expected.route === "run-demo", `${id}: selection confirmation only applies to run-demo`);
     assert(expected.outcome === "needs-confirmation", `${id}: unconfirmed selection must pause`);
@@ -322,10 +338,6 @@ function validateCaseSemantics(evalCase) {
   if (expected.route === "run-demo") {
     assert(fixture.sdkCatalog === "not-used", `${id}: run-demo must not route through SDK catalog`);
     assert(fixture.integrationSource === "not-applicable", `${id}: run-demo integration source must be not-applicable`);
-    assert(
-      expected.forbidden.includes("use-latest-for-demo"),
-      `${id}: run-demo must use the pinned examples release instead of latest`,
-    );
     if (fixture.selection === "confirmed") {
       assert(
         ["task-temp", "user-directory"].includes(fixture.demoWorkspace),
@@ -446,8 +458,8 @@ function validateCaseSemantics(evalCase) {
     assert(expected.required.includes("read-sdk-catalog"), `${id}: direct SDK integration must read SDK catalog`);
     assert(expected.required.includes("bypass-demo-when-direct"), `${id}: direct SDK integration must bypass Demo`);
     assert(
-      !expected.forbidden.includes("use-latest-for-demo"),
-      `${id}: direct SDK integration must not inherit the Demo-only latest prohibition`,
+      !expected.forbidden.includes("use-example-prerelease-tag"),
+      `${id}: direct SDK integration must not inherit the Demo-only prerelease prohibition`,
     );
     for (const behavior of [
       "require-demo-baseline",
@@ -500,17 +512,13 @@ function validateCaseSemantics(evalCase) {
       `${id}: existing project must preserve installed SDK version`,
     );
     assert(
-      !expected.forbidden.includes("use-latest-for-demo"),
-      `${id}: existing project must not inherit the Demo-only latest prohibition`,
+      !expected.forbidden.includes("use-example-prerelease-tag"),
+      `${id}: existing project must not inherit the Demo-only prerelease prohibition`,
     );
   }
   if (fixture.integrationSource === "example") {
     assert(fixture.catalog !== "not-used", `${id}: example integration requires examples catalog`);
     assert(fixture.selection === "confirmed", `${id}: example integration requires confirmed example`);
-    assert(
-      expected.forbidden.includes("use-latest-for-demo"),
-      `${id}: example integration must preserve the pinned Demo release`,
-    );
   }
   if (fixture.integrationSource === "example" && fixture.targetProject === "existing-different-version") {
     assert(expected.required.includes("report-version-conflict"), `${id}: version conflict must be reported`);

@@ -46,7 +46,7 @@ export function validateReferenceSources(config) {
     assertRecord(source, "reference source");
     assertExactKeys(
       source,
-      ["id", "purpose", "kind", "repository", "ref", "commit", "paths"],
+      ["id", "purpose", "kind", "repository", "tagPolicy", "paths"],
       `reference source ${source.id ?? "<unknown>"}`,
     );
     assertIdentifier(source.id, "reference source id");
@@ -58,12 +58,7 @@ export function validateReferenceSources(config) {
       allowedGitRepositories.has(source.repository),
       `${source.id}: repository is not in the official allowlist: ${source.repository}`,
     );
-    assertNonEmptyString(source.ref, `${source.id}.ref`);
-    assert(
-      !["HEAD", "main", "master"].includes(source.ref) && !source.ref.startsWith("refs/heads/"),
-      `${source.id}: ref must be an immutable tag, not a branch`,
-    );
-    assert(/^[0-9a-f]{40}$/.test(source.commit), `${source.id}: commit must be a full lowercase SHA-1`);
+    assert(source.tagPolicy === "latest-stable", `${source.id}: tagPolicy must be latest-stable`);
     assertRecord(source.paths, `${source.id}.paths`);
     assert(Object.keys(source.paths).length > 0, `${source.id}.paths must be non-empty`);
     for (const [name, path] of Object.entries(source.paths)) {
@@ -78,6 +73,36 @@ export function selectReferenceSource(config, purpose) {
   const matches = config.sources.filter((source) => source.purpose === purpose);
   assert(matches.length === 1, `expected exactly one reference source for purpose ${purpose}, found ${matches.length}`);
   return matches[0];
+}
+
+export function selectLatestStableTag(tags) {
+  assert(Array.isArray(tags), "tags must be an array");
+  const candidates = [];
+  for (const tag of new Set(tags)) {
+    if (typeof tag !== "string") continue;
+    const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(tag);
+    if (match === null) continue;
+    candidates.push({ tag, version: match.slice(1).map(Number) });
+  }
+  assert(candidates.length > 0, "official examples repository has no stable X.Y.Z tag");
+  candidates.sort((left, right) => {
+    for (let index = 0; index < 3; index += 1) {
+      if (left.version[index] !== right.version[index]) return left.version[index] - right.version[index];
+    }
+    return 0;
+  });
+  return candidates.at(-1).tag;
+}
+
+export function resolveLatestStableTag(repository) {
+  const output = capture("git", ["ls-remote", "--tags", "--refs", repository]);
+  const tags = output
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.trim().split(/\s+/)[1])
+    .filter((ref) => ref?.startsWith("refs/tags/"))
+    .map((ref) => ref.slice("refs/tags/".length));
+  return selectLatestStableTag(tags);
 }
 
 export function validateCatalog(examplesRoot, catalogPath = "examples.json") {
@@ -224,19 +249,24 @@ export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = 
   assert(config.paths.catalog === "examples.json", "examples catalog path must be examples.json");
   let temporaryRoot;
   let examplesRoot;
+  let ref;
 
   try {
     if (sourceDir === undefined) {
       temporaryRoot = mkdtempSync(join(tmpdir(), "eva-sdk-release-"));
       examplesRoot = join(temporaryRoot, "examples");
-      run("git", ["clone", "--branch", config.ref, "--depth", "1", config.repository, examplesRoot]);
+      ref = resolveLatestStableTag(config.repository);
+      run("git", ["clone", "--branch", ref, "--depth", "1", config.repository, examplesRoot]);
     } else {
       examplesRoot = resolve(sourceDir);
       assertDirectory(examplesRoot, "source directory");
+      ref = capture("git", ["-C", examplesRoot, "describe", "--tags", "--exact-match", "HEAD"]);
+      selectLatestStableTag([ref]);
     }
 
     const head = capture("git", ["-C", examplesRoot, "rev-parse", "HEAD"]);
-    assert(head === config.commit, `checked-out commit ${head} does not match pinned ${config.commit}`);
+    const tagCommit = capture("git", ["-C", examplesRoot, "rev-list", "-n", "1", ref]);
+    assert(head === tagCommit, `checked-out commit ${head} does not match resolved tag ${ref} @ ${tagCommit}`);
     const repositoryValidator = join(examplesRoot, "scripts", "verify-catalog.mjs");
     assertFile(repositoryValidator, "repository catalog validator");
     run(process.execPath, [repositoryValidator], { cwd: examplesRoot });
@@ -259,7 +289,7 @@ export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = 
         sdkPackage: item.sdkPackage,
         sdkVersion: item.sdkVersion,
       })),
-      ref: config.ref,
+      ref,
     };
   } finally {
     if (temporaryRoot !== undefined && !keepTemp) rmSync(temporaryRoot, { force: true, recursive: true });

@@ -9,7 +9,13 @@ test("accepts the repository CLI protocol", () => {
 
 test("rejects a drifted CLI package name", () => {
   const documents = cloneDocuments();
-  documents.cli = documents.cli.replace("auteva-test-cli", "unconfirmed-cli-package");
+  documents.cli = documents.cli.replace("@autoark-ai/eva-cli", "unconfirmed-cli-package");
+  assert.throws(() => validateCliProtocol(documents), /install command must be/);
+});
+
+test("rejects a CLI install command without the latest tag", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace("@autoark-ai/eva-cli@latest", "@autoark-ai/eva-cli");
   assert.throws(() => validateCliProtocol(documents), /install command must be/);
 });
 

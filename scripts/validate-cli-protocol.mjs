@@ -33,12 +33,13 @@ export function validateCliProtocol(documents) {
   assert(documents.runDemo.includes("[cli.md](cli.md)"), "run-demo must load cli.md");
   assert(documents.integrate.includes("[cli.md](cli.md)"), "integrate must load cli.md");
 
+  const cliInstallCommand = "npm install -g @autoark-ai/eva-cli@latest";
   assert(
-    documents.cli.includes("npm install -g auteva-test-cli"),
-    "CLI install command must be npm install -g auteva-test-cli",
+    documents.cli.includes(cliInstallCommand),
+    `CLI install command must be ${cliInstallCommand}`,
   );
   const exactCliFragments = [
-    "npm install -g auteva-test-cli",
+    cliInstallCommand,
     "`eva whoami`",
     "`eva login`",
     "`eva key list`",

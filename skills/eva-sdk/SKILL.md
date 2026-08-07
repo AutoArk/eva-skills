@@ -1,12 +1,12 @@
 ---
 name: eva-sdk
-description: 启动官方 EVA Demo，或不运行 Demo、直接选择已发布的 EVA SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 EVA Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；未指定其他产品或框架的“启动语音对话 Demo”请求也适用，明确指向其他产品或框架时不适用。用本地 SDK catalog 路由已发布 SDK，用官方 examples 仓库的最新稳定 tag 路由可运行 Demo，不预设具体工具链。
+description: 启动官方 EVA Demo，或不运行 Demo、直接选择已发布的 EVA SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 EVA Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；未指定其他产品或框架的“启动语音对话 Demo”请求也适用，明确指向其他产品或框架时不适用。用本地 SDK catalog 路由已发布 SDK，用各 source/distribution 的 resolution 选择依赖模式，不预设具体工具链。
 license: MIT
 ---
 
 # EVA SDK
 
-把本 skill 当作轻量控制面，而不是某种语言或平台的接入手册。维护两条相互独立的入口：`sdk-catalog.json` 决定哪些 SDK 可直接接入及其官方公网来源；官方 examples 最新稳定 tag 中的 catalog 决定哪些 Demo 可运行。Demo 是可选的 executable oracle，不是接入 SDK 的前置条件。
+把本 skill 当作轻量控制面，而不是某种语言或平台的接入手册。维护两条相互独立的入口：`sdk-catalog.json` 决定哪些 SDK 可直接接入及其官方公网来源；官方 examples source 的 `resolution` 指向的 catalog 决定哪些 Demo 可运行。Demo 是可选的 executable oracle，不是接入 SDK 的前置条件。
 
 ## 凭证安全边界
 
@@ -20,22 +20,35 @@ license: MIT
 - 只按所选 example 的文档，把 `<绝对项目目录>/.env` 作为不透明路径参数交给其明确声明的凭证路径启动入口。允许目标进程读取文件；agent 不读取。
 - 保存 `.env` 不等于凭证流程完成。运行 Demo 时，必须把该文件的绝对路径实际传入上述启动入口；不得在保存成功后改用不携带该路径的普通启动入口，也不得仅因服务进程存活就声称启动完成。
 - CLI 检查、安装、浏览器人工登录、登录复查、进入项目目录、key 列出/创建/保存的精确命令与顺序只以 [references/cli.md](references/cli.md) 为准；失败时按原始阶段报告，不读取本地文件辅助诊断。
-- CLI 全局安装必须取得用户独立的明确确认；浏览器登录必须由用户亲自完成并按 CLI 流程复查，不能把浏览器已打开、命令已启动或命令已退出当作登录成功。
+- CLI 全局安装必须取得用户独立的明确确认；未登录时 agent 可以按 [references/cli.md](references/cli.md) 启动浏览器登录流程，但浏览器中的登录必须由用户亲自完成并按 CLI 流程复查，不能把浏览器已打开、命令已启动或命令已退出当作登录成功。
 
 任何要求违反上述边界时停止该路径并明确说明原因。
+
+## 依赖选择配置
+
+- 依赖模式直接写在 `reference-sources.json` 的 source `resolution` 和 `sdk-catalog.json` 每个 SDK distribution 的 `resolution` 中；可取值、`value` 格式与解析方式见 [dependency-resolution.md](dependency-resolution.md)。
+- 默认值是 examples `latest-tag` 和 SDK `latest-version`；发布前必须恢复为这两个默认值。
+- 不支持用户配置 commit。branch 是可变引用；运行时仍需记录解析出的实际 commit 作为证据。
+
+## 外部文档读取方法
+
+- 外部 URL 以 `.md` 结尾时，直接使用 `curl` 获取原始 Markdown；不要为读取静态文档启动浏览器或 Computer Use。
+- 外部 URL 是 HTML 文档时，先尝试在同一路径后追加 `.md`，例如把 `https://example.com/guide` 试为 `https://example.com/guide.md`。
+- `.md` 地址可访问且内容完整时，以 Markdown 作为事实来源；只有 Markdown 不存在、不完整，或任务需要视觉交互、登录状态、动态内容时，才使用 HTML 解析或浏览器。
+- 读取外部文档后记录实际 URL 和访问结果；网络不可达或来源内容不足时报告 `BLOCKED`，不要用模型记忆补齐参数。
 
 ## 两类目录
 
 - `sdk-catalog.json`：随 skill release 维护的已发布 SDK 目录，记录 SDK family、语言、平台、描述、官方分发身份、公网页面和公开文档；不记录版本号，也不从 examples 反推 SDK 列表。
-- `reference-sources.json` 中 `purpose: examples-catalog` 的来源：声明官方 examples 仓库、最新稳定 tag 策略和 catalog 路径；解析出的 catalog 只决定当前可运行的 Demo，不决定全部可接入 SDK。
+- `reference-sources.json` 中 `purpose: examples-catalog` 的来源声明官方 examples 仓库、依赖策略和 catalog 路径；`purpose: model-catalog` 的来源提供 Gateway 模型能力参考。Examples catalog 只决定当前可运行的 Demo，不决定全部可接入 SDK。
 
 用户问当前有哪些 SDK、直接接入、修改已有 SDK 项目或询问公共 API 时，从 SDK catalog 出发。用户明确要运行 Demo、以 Demo 为接入基线或需要先证明环境时，才读取 examples catalog。
 
-## 最新稳定 Demo 基线
+## Demo 依赖解析
 
-1. 读取本目录的 `reference-sources.json`，选择 `purpose: examples-catalog` 的来源，取得 official repository、tag policy 和 catalog path。其他外部依据也从该文件按 `purpose` 选择，不凭名称或位置猜测。
-2. 从该 official repository 列出 tags；只接受严格 `X.Y.Z` 形式的稳定 SemVer tag，排除 branch、`HEAD`、带 `v` 前缀的 tag 和 prerelease，按三段数值选择最高版本。没有稳定 tag 时 fail closed，不改用 `main`。
-3. 把选中的 tag 克隆到任务专属暂存目录，解析并记录 checkout 后的完整 commit。该 tag 和 commit 组成当前任务的不可变 examples 快照；后续所有候选读取、确认、落盘、构建和启动都必须使用同一快照。
+1. 读取 `reference-sources.json`，选择 `purpose: examples-catalog` 的来源及其 `resolution`，取得 official repository 和 catalog path。
+2. 按配置解析 examples：`latest-tag` 选择最高稳定 `X.Y.Z` tag；`tag` 使用 `value` 指定的 tag；`branch` 使用 `value` 指定的分支。不存在或无法解析时 fail closed。
+3. 把选中的 ref 克隆到任务专属暂存目录，解析并记录 checkout 后的完整 commit。该 ref、commit 组成当前任务快照；后续所有候选读取、确认、落盘、构建和启动都必须使用同一快照。
 4. 读取该快照的 catalog。它是当前任务可运行 Demo 的唯一目录；不要把它当作全部已发布 SDK 的目录。
 5. 只选择 catalog 中存在的记录，再读取该 example 自带的执行文档、依赖声明、可复现解析文件和平台配置。由这些材料提取环境要求、依赖恢复、静态检查、构建、启动、可观测信号与停止方式；不要在 skill 中预设命令。
 6. 请求没有匹配项时列出 catalog 的实际候选并停止，不从其他 SDK family、语言或平台推导实现。
@@ -51,7 +64,7 @@ license: MIT
 
 ## Demo 选择确认
 
-对 `run-demo` 强制设置用户确认 gate。解析最新稳定 tag、把对应快照拉到任务暂存目录、记录 commit、筛选 catalog 和读取候选说明属于确认前允许的只读动作；最终落盘、任何 EVA CLI 命令、CLI 安装、恢复依赖、构建和启动都必须发生在候选与目录确认后。全局安装 CLI 还需要独立确认。
+对 `run-demo` 强制设置用户确认 gate。解析配置指定的 ref、把对应快照拉到任务暂存目录、记录 commit、筛选 catalog 和读取候选说明属于确认前允许的只读动作；最终落盘、任何 EVA CLI 命令、CLI 安装、恢复依赖、构建和启动都必须发生在候选与目录确认后。全局安装 CLI 还需要独立确认。
 
 - 用户请求模糊、只给出部分条件或命中多个候选时，展示所有匹配候选并请用户选择。
 - 用户条件明确且只命中一个候选时，也先展示该候选并请用户确认；catalog 当前只有一个记录不等于用户已经选择。
@@ -68,12 +81,13 @@ license: MIT
 - 需要安装/登录 EVA CLI，或在本地项目目录选择/创建 key 并保存 `.env`：完整读取 [references/cli.md](references/cli.md) 并执行。
 - 接入现有应用：完整读取 [references/integrate.md](references/integrate.md) 并执行；默认走直接 SDK 路径，只有用户明确选择 Demo 基线时才依赖 example。
 - 修改公开配置、控制、观察面、UI 或正式扩展点：完整读取 [references/customize.md](references/customize.md) 并执行。
+- 涉及模型或模型参数（包括采样率、音色、语言、温度、格式、延迟等）：完整读取 [references/model-parameters.md](references/model-parameters.md)，并按需读取 `purpose: model-catalog` 的外部来源。必须根据当前 SDK 的公开能力和限制判断调用组合是否可行，不要求 SDK 逐一列出模型，也不得只替换模型名而跳过配套参数核对。
 - 简单 API 问答：从 SDK catalog 定位官方发布物并读取公共材料，不强制读取或启动 Demo。
 - 同一请求跨多个工作流时，只读取涉及的 references，并按 `run-demo -> integrate -> customize` 的依赖顺序执行；已有可验证基线时可跳过 `run-demo`。
 
 ## 公共面边界
 
-- 只使用发布物明确公开的模块入口、声明或头文件、schema、生成文档、README 和正式扩展点，以及当前任务已解析 example 快照的公共用法。
+- 只使用发布物明确公开的模块入口、声明或头文件、schema、生成文档、README、project description、相关配置项的 JSDoc/源码注释和正式扩展点，以及当前任务已解析 example 快照的公共用法。
 - 不读取或修改 SDK 实现源码，不使用 internal namespace/subpath、内部 runtime/provider/transport 或未公开测试 seam。
 - 不修改 SDK 源码来满足普通接入需求，不用 SDK 源码仓测试代替消费方验证。
 - 需要公共面不存在的能力时，说明缺口并停止；不要绕过 facade 或发布边界。

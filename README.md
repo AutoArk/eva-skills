@@ -59,12 +59,13 @@ CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 | SDK | 语言 / 平台 | 官方分发 |
 | --- | --- | --- |
 | Client SDK | TypeScript / Browser | [`@autoark-ai/eva-client-sdk-ts`](https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts) |
+| Client SDK | Python | [`autoark-eva-client-sdk`](https://pypi.org/project/autoark-eva-client-sdk/) |
 
-SDK catalog 不保存版本号。新接入默认从官方 distribution 的 `latest` channel 解析当时的精确版本并锁定；已有项目默认保留当前解析版本。
+SDK catalog 不保存版本号。依赖选择由各 source/distribution 的 `resolution` 控制；默认从官方 distribution 的 `latest` channel 解析精确版本并锁定，测试时可临时指定 examples tag/branch 或 SDK 精确版本。模式说明见 [`dependency-resolution.md`](skills/eva-sdk/dependency-resolution.md)。
 
 ### 设计说明
 
-- `sdk-catalog.json` 描述当前可直接接入的公开 SDK；`reference-sources.json` 维护外部参考来源，其中官方 Demo 在每次任务开始时解析最新稳定 SemVer tag，并固定该任务使用的 tag 和 commit。
+- `sdk-catalog.json` 描述当前可直接接入的公开 SDK，并在每个 distribution 上维护依赖 `resolution`；`reference-sources.json` 维护外部参考来源、examples 的依赖 `resolution` 和模型能力目录。默认发布模式解析最新稳定 SemVer tag，并固定该任务使用的 ref 和 commit。
 - Demo 请求无论只命中一个还是多个候选，都先展示描述和路径，让用户确认候选及最终目录。
 - `references/cli.md` 是 EVA CLI 精确命令和顺序的唯一权威来源，其他运行时文档只负责链接和路由。
 

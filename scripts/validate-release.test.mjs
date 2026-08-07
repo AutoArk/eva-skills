@@ -32,13 +32,27 @@ test("accepts an extensible registry and selects the examples catalog by purpose
   assert.deepEqual(selectReferenceSource(registry, "examples-catalog"), createReferenceSource());
 });
 
-test("requires the latest-stable tag policy and official repository", () => {
+test("accepts the official model catalog web source", () => {
+  const registry = validateReferenceSources({
+    schemaVersion: 1,
+    sources: [{
+      id: "eva-gateway-model-list",
+      purpose: "model-catalog",
+      kind: "web",
+      url: "https://eva.autoarkai.com/api-docs/guide/gateway-model-list.md",
+      format: "markdown",
+    }],
+  });
+  assert.equal(registry.sources[0].purpose, "model-catalog");
+});
+
+test("requires a valid resolution policy and official repository", () => {
   assert.throws(
     () => validateReferenceSources({
       schemaVersion: 1,
-      sources: [{ ...createReferenceSource(), tagPolicy: "main" }],
+      sources: [{ ...createReferenceSource(), resolution: { mode: "main" } }],
     }),
-    /tagPolicy must be latest-stable/,
+    /unsupported mode/,
   );
   assert.throws(
     () => validateReferenceSources({
@@ -186,7 +200,7 @@ function createReferenceSource() {
     purpose: "examples-catalog",
     kind: "git",
     repository: "https://github.com/AutoArk/eva-sdk-examples.git",
-    tagPolicy: "latest-stable",
+    resolution: { mode: "latest-tag" },
     paths: { catalog: "examples.json" },
   };
 }

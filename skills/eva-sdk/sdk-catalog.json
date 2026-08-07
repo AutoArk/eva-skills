@@ -13,6 +13,10 @@
       "distribution": {
         "ecosystem": "npm",
         "package": "@autoark-ai/eva-client-sdk-ts",
+        "resolution": {
+          "mode": "version",
+          "value": "1.0.4"
+        },
         "defaultChannel": "latest",
         "publicUrl": "https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts"
       },
@@ -20,6 +24,31 @@
         {
           "kind": "package-readme",
           "url": "https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts?activeTab=readme"
+        }
+      ]
+    },
+    {
+      "id": "client-sdk-python",
+      "sdkFamily": "client-sdk",
+      "language": "py",
+      "platforms": [
+        "python"
+      ],
+      "status": "published",
+      "description": "EVA 客户端 Python SDK。",
+      "distribution": {
+        "ecosystem": "pypi",
+        "package": "autoark-eva-client-sdk",
+        "resolution": {
+          "mode": "latest-version"
+        },
+        "defaultChannel": "latest",
+        "publicUrl": "https://pypi.org/project/autoark-eva-client-sdk/"
+      },
+      "documentation": [
+        {
+          "kind": "package-readme",
+          "url": "https://pypi.org/project/autoark-eva-client-sdk/"
         }
       ]
     }

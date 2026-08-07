@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { loadBrandDocuments, validateBrandStyle } from "./validate-brand-style.mjs";
 
 test("accepts the repository brand style", () => {
-  assert.deepEqual(validateBrandStyle(loadBrandDocuments()), { files: 10 });
+  assert.deepEqual(validateBrandStyle(loadBrandDocuments()), { files: 12 });
 });
 
 test("rejects mixed-case product spelling in prose", () => {

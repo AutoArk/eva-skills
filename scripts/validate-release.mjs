@@ -22,6 +22,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const OFFICIAL_EXAMPLES_REPOSITORY = "https://github.com/AutoArk/eva-sdk-examples.git";
 const allowedGitRepositories = new Set([OFFICIAL_EXAMPLES_REPOSITORY]);
+const allowedWebHosts = new Set(["eva.autoarkai.com"]);
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const referenceSourcesPath = join(repositoryRoot, "skills/eva-sdk/reference-sources.json");
 const sourceExtensions = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
@@ -44,26 +45,28 @@ export function validateReferenceSources(config) {
   const ids = new Set();
   for (const source of config.sources) {
     assertRecord(source, "reference source");
-    assertExactKeys(
-      source,
-      ["id", "purpose", "kind", "repository", "tagPolicy", "paths"],
-      `reference source ${source.id ?? "<unknown>"}`,
-    );
+    if (source.kind === "git") {
+      assertExactKeys(source, ["id", "purpose", "kind", "repository", "resolution", "paths"], `reference source ${source.id ?? "<unknown>"}`);
+    } else if (source.kind === "web") {
+      assertExactKeys(source, ["id", "purpose", "kind", "url", "format"], `reference source ${source.id ?? "<unknown>"}`);
+      validatePublicSourceUrl(source.url, `${source.id}.url`);
+      assert(source.format === "markdown", `${source.id}: unsupported web source format`);
+    } else {
+      throw new Error(`reference source ${source.id ?? "<unknown>"}: unsupported kind ${source.kind}`);
+    }
     assertIdentifier(source.id, "reference source id");
     assertIdentifier(source.purpose, `${source.id}.purpose`);
     assert(!ids.has(source.id), `duplicate reference source id: ${source.id}`);
     ids.add(source.id);
-    assert(source.kind === "git", `${source.id}: unsupported reference source kind ${source.kind}`);
-    assert(
-      allowedGitRepositories.has(source.repository),
-      `${source.id}: repository is not in the official allowlist: ${source.repository}`,
-    );
-    assert(source.tagPolicy === "latest-stable", `${source.id}: tagPolicy must be latest-stable`);
-    assertRecord(source.paths, `${source.id}.paths`);
-    assert(Object.keys(source.paths).length > 0, `${source.id}.paths must be non-empty`);
-    for (const [name, path] of Object.entries(source.paths)) {
-      assertIdentifier(name, `${source.id}.paths key`);
-      assertSafeRelativePath(path, `${source.id}.paths.${name}`);
+    if (source.kind === "git") {
+      assert(allowedGitRepositories.has(source.repository), `${source.id}: repository is not in the official allowlist: ${source.repository}`);
+      validateResolution(source.resolution, `${source.id}.resolution`, new Set(["latest-tag", "tag", "branch"]));
+      assertRecord(source.paths, `${source.id}.paths`);
+      assert(Object.keys(source.paths).length > 0, `${source.id}.paths must be non-empty`);
+      for (const [name, path] of Object.entries(source.paths)) {
+        assertIdentifier(name, `${source.id}.paths key`);
+        assertSafeRelativePath(path, `${source.id}.paths.${name}`);
+      }
     }
   }
   return config;
@@ -92,6 +95,30 @@ export function selectLatestStableTag(tags) {
     return 0;
   });
   return candidates.at(-1).tag;
+}
+
+function validateResolution(resolution, label, modes) {
+  assertRecord(resolution, label);
+  const keys = Object.keys(resolution).sort();
+  assert(keys.length === 1 || (keys.length === 2 && keys.includes("value")), `${label} has invalid fields`);
+  assert(typeof resolution.mode === "string" && modes.has(resolution.mode), `${label}: unsupported mode`);
+  if (resolution.mode === "latest-tag" || resolution.mode === "latest-version") {
+    assert(resolution.value === undefined, `${label}: latest mode must not define value`);
+  } else {
+    assert(typeof resolution.value === "string" && resolution.value.trim().length > 0, `${label}: value is required`);
+  }
+}
+
+function validatePublicSourceUrl(value, label) {
+  assert(typeof value === "string" && value.length > 0, `${label} must be a non-empty URL`);
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${label} must be a valid URL`);
+  }
+  assert(url.protocol === "https:", `${label} must use HTTPS`);
+  assert(allowedWebHosts.has(url.hostname), `${label} host is not in the official allowlist`);
 }
 
 export function resolveLatestStableTag(repository) {
@@ -246,6 +273,7 @@ export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = 
   const registry = validateReferenceSources(loadJson(referenceSourcesPath, "reference sources"));
   const config = selectReferenceSource(registry, "examples-catalog");
   assert(config.repository === OFFICIAL_EXAMPLES_REPOSITORY, "examples catalog repository is not official");
+  assert(config.resolution.mode === "latest-tag", "release validation requires latest-tag examples resolution");
   assert(config.paths.catalog === "examples.json", "examples catalog path must be examples.json");
   let temporaryRoot;
   let examplesRoot;

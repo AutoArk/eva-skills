@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultCatalogPath = resolve(repositoryRoot, "skills/eva-sdk/sdk-catalog.json");
-const allowedPublicHosts = new Set(["www.npmjs.com"]);
+const allowedPublicHosts = new Set(["www.npmjs.com", "pypi.org"]);
 
 export function loadSdkCatalog(path = defaultCatalogPath) {
   try {
@@ -90,10 +90,22 @@ export function validateNpmRegistryMetadata(sdk, metadata) {
   return resolved;
 }
 
+export function validatePyPiRegistryMetadata(sdk, metadata) {
+  assert(sdk.distribution.ecosystem === "pypi", `${sdk.id}: SDK is not PyPI-distributed`);
+  assertRecord(metadata, `${sdk.id} registry metadata`);
+  assert(metadata.info?.name === sdk.distribution.package, `${sdk.id}: registry package name drifted`);
+  const resolved = metadata.info?.version;
+  assertNonEmptyString(resolved, `${sdk.id}: default channel must resolve`);
+  assert(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(resolved), `${sdk.id}: default channel must resolve to an exact version`);
+  return resolved;
+}
+
 export function queryLiveSdkMetadata(sdk) {
-  if (sdk.distribution.ecosystem !== "npm") {
-    throw new Error(`${sdk.id}: unsupported live distribution ${sdk.distribution.ecosystem}`);
+  if (sdk.distribution.ecosystem === "pypi") {
+    const output = execFileSync("curl", ["-fsSL", `https://pypi.org/pypi/${sdk.distribution.package}/json`], { encoding: "utf8" });
+    return JSON.parse(output);
   }
+  if (sdk.distribution.ecosystem !== "npm") throw new Error(`${sdk.id}: unsupported live distribution ${sdk.distribution.ecosystem}`);
   const output = execFileSync(
     "npm",
     ["view", sdk.distribution.package, "name", "dist-tags", "--json"],
@@ -107,20 +119,35 @@ function validateDistribution(sdk) {
   assertRecord(distribution, `${sdk.id}.distribution`);
   assertExactKeys(
     distribution,
-    ["ecosystem", "package", "defaultChannel", "publicUrl"],
+    ["ecosystem", "package", "resolution", "defaultChannel", "publicUrl"],
     `${sdk.id}.distribution`,
   );
-  if (distribution.ecosystem !== "npm") {
+  if (!["npm", "pypi"].includes(distribution.ecosystem)) {
     throw new Error(`${sdk.id}: unsupported distribution ecosystem ${distribution.ecosystem}`);
   }
-  assert(
-    /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(distribution.package),
-    `${sdk.id}: invalid npm package`,
-  );
+  const packagePattern = distribution.ecosystem === "npm"
+    ? /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/
+    : /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+  assert(packagePattern.test(distribution.package), `${sdk.id}: invalid ${distribution.ecosystem} package`);
   assert(distribution.defaultChannel === "latest", `${sdk.id}: default channel must be latest`);
+  validateResolution(distribution.resolution, `${sdk.id}.distribution.resolution`);
   validatePublicUrl(distribution.publicUrl, `${sdk.id}.distribution.publicUrl`);
-  const expectedUrl = `https://www.npmjs.com/package/${distribution.package}`;
+  const expectedUrl = distribution.ecosystem === "npm"
+    ? `https://www.npmjs.com/package/${distribution.package}`
+    : `https://pypi.org/project/${distribution.package}/`;
   assert(distribution.publicUrl === expectedUrl, `${sdk.id}: npm public URL must be ${expectedUrl}`);
+}
+
+function validateResolution(resolution, label) {
+  assertRecord(resolution, label);
+  const keys = Object.keys(resolution).sort();
+  assert(keys.length === 1 || (keys.length === 2 && keys.includes("value")), `${label} has invalid fields`);
+  assert(["latest-version", "version"].includes(resolution.mode), `${label}: unsupported mode`);
+  if (resolution.mode === "latest-version") {
+    assert(resolution.value === undefined, `${label}: latest mode must not define value`);
+  } else {
+    assert(typeof resolution.value === "string" && resolution.value.trim().length > 0, `${label}: value is required`);
+  }
 }
 
 function validatePublicUrl(value, label) {
@@ -186,7 +213,10 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
     const resolved = [];
     if (options.live) {
       for (const sdk of sdks) {
-        const exact = validateNpmRegistryMetadata(sdk, queryLiveSdkMetadata(sdk));
+        const metadata = queryLiveSdkMetadata(sdk);
+        const exact = sdk.distribution.ecosystem === "npm"
+          ? validateNpmRegistryMetadata(sdk, metadata)
+          : validatePyPiRegistryMetadata(sdk, metadata);
         resolved.push(`${sdk.id}:${sdk.distribution.defaultChannel}->${exact}`);
       }
     }

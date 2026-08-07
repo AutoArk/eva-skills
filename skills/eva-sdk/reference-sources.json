@@ -6,10 +6,20 @@
       "purpose": "examples-catalog",
       "kind": "git",
       "repository": "https://github.com/AutoArk/eva-sdk-examples.git",
-      "tagPolicy": "latest-stable",
+      "resolution": {
+        "mode": "branch",
+        "value": "codex/py-ts-example-updates"
+      },
       "paths": {
         "catalog": "examples.json"
       }
+    },
+    {
+      "id": "eva-gateway-model-list",
+      "purpose": "model-catalog",
+      "kind": "web",
+      "url": "https://eva.autoarkai.com/api-docs/guide/gateway-model-list.md",
+      "format": "markdown"
     }
   ]
 }

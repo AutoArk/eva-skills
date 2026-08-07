@@ -16,9 +16,8 @@
 2. 读取目标项目的仓内指令、版本控制状态、依赖与构建配置、入口和验证命令；声明本轮会触及的文件。不要克隆 examples，除非用户随后选择 Demo 基线。
 3. 检查目标项目是否已安装该 SDK：
    - 已安装：保留当前解析版本，从该版本的发布物读取公共契约；不自动升级。
-   - 未安装且未指定版本：向官方 distribution 查询 SDK catalog 的 `defaultChannel`，取得精确版本，再用目标项目原生依赖管理方式安装并锁定。
-   - 用户指定版本：先验证官方 distribution 存在该版本，再安装并锁定。
-4. 从发布物公共入口、声明/头文件、schema、随包 README 与 catalog 官方文档建立职责映射。至少覆盖 SDK 创建与公开配置、生命周期与资源释放、输入输出与观察面、平台权限/资产/宿主集成，以及凭证边界。
+   - 读取所选 SDK distribution 的 `resolution`：`latest-version` 查询 `defaultChannel`，取得精确版本；`version` 使用其 `value`，先验证官方 distribution 存在该版本，再安装并锁定。
+4. 先完整阅读所选发布物的 package README、project description、导出声明/类型和目标配置项的 JSDoc/源码注释，再结合 catalog 官方文档建立职责映射。涉及模型参数时同时执行 [model-parameters.md](model-parameters.md)：根据 SDK 当前公开能力和限制判断调用组合，再按模型列表重新核对配套参数；不要要求 SDK 明确列出每个模型。至少覆盖 SDK 创建与公开配置、生命周期与资源释放、输入输出与观察面、平台权限/资产/宿主集成，以及凭证边界。
 5. 先使用当前生态的编译器、静态检查、schema、lint 或配置 validator，再做最小代码与配置修改。不要替换应用脚手架、修改无关文件或从 SDK internal 补实现。
 6. 按目标项目原有工具链执行由便宜到昂贵的验证，并报告 SDK 公网来源、请求 channel/版本、最终解析的精确版本与实际完成层级。
 

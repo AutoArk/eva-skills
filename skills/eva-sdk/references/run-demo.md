@@ -2,14 +2,14 @@
 
 ## 目标
 
-在用户指定的明确目录或任务专属临时目录拉取 `reference-sources.json` 中 `resolution` 选择的官方 examples ref 对应快照，启动其中一个 Demo，使用该 example 自己的工具链和运行形态自动验证到 L2，并把可操作入口交给用户继续体验。
+从 `reference-sources.json` 中唯一的 `purpose: examples-catalog`、`kind: git` source 读取 `repository`、`resolution` 和 catalog path；按该 source 的依赖策略把官方 examples ref 快照拉取到用户指定的明确目录或任务专属临时目录，启动其中一个 Demo，使用该 example 自己的工具链和运行形态自动验证到 L2，并把可操作入口交给用户继续体验。其他用途的 Web source（例如 `purpose: model-catalog`）只用于文档参考，不参与 Demo 快照拉取。
 
 ## 执行
 
 1. 执行 `SKILL.md` 的“最新稳定 Demo 基线”，用用户给出的 SDK family、语言、平台、场景或 example id 过滤 catalog；不要选择 catalog 外的组合。
 2. 对每个匹配候选读取 README 的首段说明和原生依赖材料，形成候选卡片：`id`、一句话描述、SDK family、语言、平台、catalog 路径、状态和可确定的 SDK 精确版本。同时询问 examples 快照使用任务专属临时目录，还是用户给出的明确目标目录。
 3. 执行 `SKILL.md` 的“Demo 选择确认”：模糊或多候选请求展示候选列表并让用户选择；唯一候选也展示卡片并请求确认。候选和最终落盘位置缺少任意一项时停止并等待，不得继续后续步骤。
-4. 用户选择临时目录时保留已验证的暂存快照作为最终快照根；选择自定义目录时要求目标不存在或为空，从同一官方 repository 拉取相同 tag 并再次核对 commit。不得覆盖非空目录。所选 Demo 工作目录解析为 `<最终快照根>/<catalog path>`。
+4. 用户选择临时目录时保留已验证的暂存快照作为最终快照根；选择自定义目录时要求目标不存在或为空，从同一官方 repository 拉取相同 ref 并再次核对 commit。不得覆盖非空目录。所选 Demo 工作目录解析为 `<最终快照根>/<catalog path>`。
 5. 在最终快照根运行其自带 catalog validator（若存在），再完整读取所选 example 的执行文档、依赖声明、可复现解析文件、平台配置和公共 SDK 用法。
 6. 从 example 材料生成本次执行计划：运行环境、原生依赖恢复方式、静态检查、release 构建、普通启动入口、凭证路径启动入口及其路径参数位置、可观测信号、交互入口和停止/复位方式。Demo 需要 AK 时，文档没有明确凭证路径启动入口就停止；不要把当前 catalog 中某个 example 的命令提升为全局规则。
 7. 确认本机满足文档声明的 runtime、toolchain、平台与设备要求。使用该生态的 frozen/locked/reproducible 模式恢复依赖；禁止改写解析结果或切换到浮动版本。
@@ -25,7 +25,7 @@
 - CLI 缺失、未登录或 key 列出/创建/保存失败：严格执行 [cli.md](cli.md) 的对应分支；保留其中的独立安装确认、浏览器人工参与、登录复查、创建时禁止显示 key 和 `.env` 不透明路径边界，不在这里维护命令副本。
 - 已保存 `.env` 但 example 缺少凭证路径启动入口、启动调用没有携带该文件的绝对路径，或实际运行进程来自其他入口：报告 `BLOCKED`；不要降级为普通启动，也不要把进程存活冒充 L2。
 - 用户选择的最终快照目录已存在且非空：停止并请求新的空目录或由用户明确处理；不要合并、覆盖或清空。
-- 没有稳定 SemVer tag、重新拉取的相同 tag 与已解析 commit 不一致、catalog 无匹配、example 的依赖或运行材料不完整：fail closed，不换用 branch、prerelease 或其他 tag。
+- `resolution` 指定的 ref 不存在、重新拉取的相同 ref 与已解析 commit 不一致、catalog 无匹配、example 的依赖或运行材料不完整：fail closed，不静默切换到其他 branch、tag 或 prerelease。
 - 依赖恢复、静态检查、构建或启动失败：沿 example 声明的工具链与目标平台定位失败层；保留最小复现证据，不修改 SDK 源码来绕过。
 - 缺少可验证 L2 的平台传感器：报告已证明的较低层级和缺口，不用其他平台的检查方式替代。
 

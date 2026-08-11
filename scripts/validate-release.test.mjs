@@ -9,8 +9,10 @@ import {
   selectReferenceSource,
   validateCatalog,
   validateInstalledPublicImports,
+  validateReleaseSdkResolutions,
   validateReferenceSources,
 } from "./validate-release.mjs";
+import { loadSdkCatalog, validateSdkCatalog } from "./validate-sdk-catalog.mjs";
 
 const temporaryRoots = [];
 
@@ -63,6 +65,18 @@ test("requires a valid resolution policy and official repository", () => {
   );
 });
 
+test("release validation requires default SDK dependency resolution", () => {
+  const sdks = validateSdkCatalog(loadSdkCatalog());
+  assert.equal(validateReleaseSdkResolutions(sdks).length, 2);
+
+  const testSdks = structuredClone(sdks);
+  testSdks[0].distribution.resolution = { mode: "version", value: "1.2.3" };
+  assert.throws(
+    () => validateReleaseSdkResolutions(testSdks),
+    /requires latest-version SDK resolution: client-sdk-typescript/,
+  );
+});
+
 test("selects the highest stable numeric SemVer tag", () => {
   assert.equal(
     selectLatestStableTag(["0.0.9", "0.0.10", "0.1.0-beta.1", "v1.0.0", "main", "0.1.0"]),
@@ -95,6 +109,59 @@ test("validates an npm catalog, exact lock, and exported SDK imports", () => {
     validateInstalledPublicImports(fixture.exampleRoot, "@autoark-ai/eva-client-sdk-ts"),
     ["@autoark-ai/eva-client-sdk-ts", "@autoark-ai/eva-client-sdk-ts/browser"],
   );
+});
+
+test("validates a PyPI catalog, uv lock, registry sources, and public imports", () => {
+  const fixture = createPyPiFixture();
+  const examples = validateCatalog(fixture.root);
+  assert.equal(examples.length, 1);
+  assert.equal(examples[0].sdkVersion, "1.0.0");
+  assert.deepEqual(examples[0].publicImports, [
+    "eva_client_sdk",
+    "eva_client_sdk.contracts",
+    "eva_client_sdk.media",
+  ]);
+});
+
+test("rejects PyPI project and lock version drift", () => {
+  const fixture = createPyPiFixture();
+  writeFileSync(
+    join(fixture.exampleRoot, "pyproject.toml"),
+    fixture.pyprojectText.replace("==1.0.0", "==1.0.1"),
+  );
+  assert.throws(() => validateCatalog(fixture.root), /uv.lock SDK version drifted/);
+});
+
+test("rejects non-PyPI and local uv lock sources", () => {
+  const registryFixture = createPyPiFixture();
+  writeFileSync(
+    join(registryFixture.exampleRoot, "uv.lock"),
+    registryFixture.lockText.replace("https://pypi.org/simple", "https://example.com/simple"),
+  );
+  assert.throws(() => validateCatalog(registryFixture.root), /must resolve from https:\/\/pypi.org\/simple/);
+
+  const localFixture = createPyPiFixture();
+  writeFileSync(
+    join(localFixture.exampleRoot, "uv.lock"),
+    `${localFixture.lockText}\n[[package]]\nname = "local-helper"\nversion = "0.1.0"\nsource = { editable = "../helper" }\n`,
+  );
+  assert.throws(() => validateCatalog(localFixture.root), /forbidden source/);
+
+  const virtualFixture = createPyPiFixture();
+  writeFileSync(
+    join(virtualFixture.exampleRoot, "uv.lock"),
+    `${virtualFixture.lockText}\n[[package]]\nname = "virtual-helper"\nversion = "0.1.0"\nsource = { virtual = "." }\n`,
+  );
+  assert.throws(() => validateCatalog(virtualFixture.root), /must use source/);
+});
+
+test("rejects non-public Python SDK imports", () => {
+  const fixture = createPyPiFixture();
+  writeFileSync(
+    join(fixture.exampleRoot, "internal.py"),
+    "from eva_client_sdk.internal import secret\n",
+  );
+  assert.throws(() => validateCatalog(fixture.root), /forbidden non-public SDK import/);
 });
 
 test("rejects catalog paths that escape or disagree with family/language", () => {
@@ -192,6 +259,59 @@ function createNpmFixture() {
   }, null, 2)}\n`);
 
   return { catalogText, exampleRoot, lockText, root };
+}
+
+function createPyPiFixture() {
+  const root = mkdtempSync(join(tmpdir(), "eva-release-python-test-"));
+  temporaryRoots.push(root);
+  const exampleRoot = join(root, "client-sdk", "python", "demo");
+  mkdirSync(exampleRoot, { recursive: true });
+  const catalog = {
+    schemaVersion: 1,
+    examples: [{
+      id: "client-sdk-python-demo",
+      sdkFamily: "client-sdk",
+      language: "python",
+      platform: "terminal",
+      path: "client-sdk/python/demo",
+      sdk: { ecosystem: "pypi", package: "autoark-eva-client-sdk" },
+      status: "dev",
+    }],
+  };
+  const pyprojectText = `[project]
+name = "fixture"
+version = "0.1.0"
+dependencies = ["autoark-eva-client-sdk[pyaudio,camera]==1.0.0"]
+
+[tool.uv.sources]
+autoark-eva-client-sdk = { index = "eva-pypi" }
+
+[[tool.uv.index]]
+name = "eva-pypi"
+url = "https://pypi.org/simple"
+explicit = true
+`;
+  const lockText = `version = 1
+
+[[package]]
+name = "autoark-eva-client-sdk"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "fixture"
+version = "0.1.0"
+source = { virtual = "." }
+`;
+  writeFileSync(join(root, "examples.json"), `${JSON.stringify(catalog, null, 2)}\n`);
+  writeFileSync(join(exampleRoot, "README.md"), "# Python Demo\n");
+  writeFileSync(join(exampleRoot, "pyproject.toml"), pyprojectText);
+  writeFileSync(join(exampleRoot, "uv.lock"), lockText);
+  writeFileSync(
+    join(exampleRoot, "main.py"),
+    "from eva_client_sdk import Eva\nfrom eva_client_sdk.contracts import StaticGreeting\nfrom eva_client_sdk.media import NativeAecProcessor\n",
+  );
+  return { exampleRoot, lockText, pyprojectText, root };
 }
 
 function createReferenceSource() {

@@ -14,8 +14,7 @@
         "ecosystem": "npm",
         "package": "@autoark-ai/eva-client-sdk-ts",
         "resolution": {
-          "mode": "version",
-          "value": "1.0.4"
+          "mode": "latest-version"
         },
         "defaultChannel": "latest",
         "publicUrl": "https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts"

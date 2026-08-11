@@ -13,7 +13,7 @@ test("accepts the repository SDK catalog without stored versions", () => {
   assert.equal(sdks.length, 2);
   assert.equal(sdks[0].id, "client-sdk-typescript");
   assert.equal(sdks[0].distribution.defaultChannel, "latest");
-  assert.deepEqual(sdks[0].distribution.resolution, { mode: "version", value: "1.0.4" });
+  assert.deepEqual(sdks[0].distribution.resolution, { mode: "latest-version" });
 });
 
 test("accepts the PyPI SDK distribution", () => {

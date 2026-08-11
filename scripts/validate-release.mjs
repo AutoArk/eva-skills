@@ -20,11 +20,14 @@ import {
 } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { loadSdkCatalog, validateSdkCatalog } from "./validate-sdk-catalog.mjs";
+
 const OFFICIAL_EXAMPLES_REPOSITORY = "https://github.com/AutoArk/eva-sdk-examples.git";
 const allowedGitRepositories = new Set([OFFICIAL_EXAMPLES_REPOSITORY]);
 const allowedWebHosts = new Set(["eva.autoarkai.com"]);
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const referenceSourcesPath = join(repositoryRoot, "skills/eva-sdk/reference-sources.json");
+const pythonExampleInspectorPath = join(repositoryRoot, "scripts/inspect-python-example.py");
 const sourceExtensions = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
 const ignoredSourceDirectories = new Set([".git", "dist", "node_modules"]);
 
@@ -76,6 +79,17 @@ export function selectReferenceSource(config, purpose) {
   const matches = config.sources.filter((source) => source.purpose === purpose);
   assert(matches.length === 1, `expected exactly one reference source for purpose ${purpose}, found ${matches.length}`);
   return matches[0];
+}
+
+export function validateReleaseSdkResolutions(sdks) {
+  assert(Array.isArray(sdks) && sdks.length > 0, "release SDK catalog must be non-empty");
+  for (const sdk of sdks) {
+    assert(
+      sdk.distribution.resolution.mode === "latest-version",
+      `release validation requires latest-version SDK resolution: ${sdk.id}`,
+    );
+  }
+  return sdks;
 }
 
 export function selectLatestStableTag(tags) {
@@ -170,13 +184,43 @@ export function validateCatalog(examplesRoot, catalogPath = "examples.json") {
     assertRecord(example.sdk, `${example.id}.sdk`);
     assertNonEmptyString(example.sdk.ecosystem, `${example.id}.sdk.ecosystem`);
 
-    if (example.sdk.ecosystem !== "npm") {
-      throw new Error(`${example.id}: unsupported SDK ecosystem ${example.sdk.ecosystem}`);
-    }
-    validated.push(validateNpmExample(exampleRoot, example));
+    if (example.sdk.ecosystem === "npm") validated.push(validateNpmExample(exampleRoot, example));
+    else if (example.sdk.ecosystem === "pypi") validated.push(validatePyPiExample(exampleRoot, example));
+    else throw new Error(`${example.id}: unsupported SDK ecosystem ${example.sdk.ecosystem}`);
   }
 
   return validated;
+}
+
+export function validatePyPiExample(exampleRoot, example) {
+  assertNonEmptyString(example.sdk.package, `${example.id}.sdk.package`);
+  assertFile(join(exampleRoot, "pyproject.toml"), `${example.id} pyproject.toml`);
+  assertFile(join(exampleRoot, "uv.lock"), `${example.id} uv.lock`);
+  const inspection = spawnSync(
+    "python3",
+    [pythonExampleInspectorPath, exampleRoot, example.sdk.package],
+    { encoding: "utf8" },
+  );
+  if (inspection.error !== undefined) throw inspection.error;
+  assert(
+    inspection.status === 0,
+    `${example.id}: ${inspection.stderr.trim() || "Python example inspection failed"}`,
+  );
+  const identity = JSON.parse(inspection.stdout);
+  assert(identity.package === example.sdk.package, `${example.id}: inspected SDK package drifted`);
+  assertNonEmptyString(identity.version, `${example.id}: inspected SDK version`);
+  assert(
+    Array.isArray(identity.publicImports) && identity.publicImports.length > 0,
+    `${example.id}: inspected public imports must be non-empty`,
+  );
+  return {
+    ecosystem: "pypi",
+    example,
+    exampleRoot,
+    sdkPackage: identity.package,
+    sdkVersion: identity.version,
+    publicImports: identity.publicImports,
+  };
 }
 
 export function validateNpmExample(exampleRoot, example) {
@@ -270,6 +314,7 @@ export function collectSourceImports(root) {
 }
 
 export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = false } = {}) {
+  validateReleaseSdkResolutions(validateSdkCatalog(loadSdkCatalog()));
   const registry = validateReferenceSources(loadJson(referenceSourcesPath, "reference sources"));
   const config = selectReferenceSource(registry, "examples-catalog");
   assert(config.repository === OFFICIAL_EXAMPLES_REPOSITORY, "examples catalog repository is not official");
@@ -302,6 +347,7 @@ export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = 
     const examples = validateCatalog(examplesRoot, config.paths.catalog);
     if (!skipBuild) {
       for (const item of examples) {
+        if (item.ecosystem === "pypi") continue;
         run("npm", ["ci"], { cwd: item.exampleRoot });
         validateInstalledPublicImports(item.exampleRoot, item.sdkPackage);
         run("npm", ["run", "build"], { cwd: item.exampleRoot });

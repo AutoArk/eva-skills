@@ -7,8 +7,7 @@
       "kind": "git",
       "repository": "https://github.com/AutoArk/eva-sdk-examples.git",
       "resolution": {
-        "mode": "branch",
-        "value": "codex/py-ts-example-updates"
+        "mode": "latest-tag"
       },
       "paths": {
         "catalog": "examples.json"

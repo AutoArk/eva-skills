@@ -125,13 +125,23 @@ export function validateCliProtocol(documents) {
       && documents.runDemo.includes("不得擅自改为等待用户在设备端手工输入 AK"),
     "run-demo must not silently downgrade when the EVA CLI credential path is blocked",
   );
+  assert(
+    documents.runDemo.includes("该凭证入口是否自行执行编译/构建")
+      && documents.runDemo.includes("不得在此之前再运行普通 debug 或 release 构建")
+      && documents.runDemo.includes("launcher 的构建结果作为本次构建证据"),
+    "run-demo must not prebuild when the credential launcher already builds",
+  );
+  assert(
+    documents.runDemo.includes("该入口此时完成的构建就是本次唯一构建"),
+    "run-demo must count a build-capable credential launcher as the single build",
+  );
 
-  const demoBuild = documents.runDemo.indexOf("依次运行当前生态适用的静态检查");
-  const demoCli = documents.runDemo.indexOf("完整读取并执行 [cli.md](cli.md)", demoBuild + 1);
+  const demoPreflight = documents.runDemo.indexOf("先运行当前生态适用的测试、静态检查");
+  const demoCli = documents.runDemo.indexOf("完整读取并执行 [cli.md](cli.md)", demoPreflight + 1);
   const demoBind = documents.runDemo.indexOf("同一个不透明路径值", demoCli + 1);
   const demoStart = documents.runDemo.indexOf("按 example 的凭证路径启动入口启动目标", demoBind + 1);
-  assert(demoBuild >= 0, "run-demo must complete build checks before retrieving the credential path");
-  assert(demoCli > demoBuild, "run-demo must retrieve the credential path after build checks");
+  assert(demoPreflight >= 0, "run-demo must complete pre-credential checks before retrieving the credential path");
+  assert(demoCli > demoPreflight, "run-demo must retrieve the credential path after pre-credential checks");
   assert(demoBind > demoCli, "run-demo must bind the credential path immediately after CLI retrieval");
   assert(demoStart > demoBind, "run-demo must pass the bound credential path into startup");
 

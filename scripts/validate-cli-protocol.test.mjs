@@ -79,13 +79,31 @@ test("forbids eva key show from exposing AK plaintext", () => {
   assert.throws(() => validateCliProtocol(documents), /must forbid eva key show/);
 });
 
-test("retrieves and binds the credential path only after build checks", () => {
+test("retrieves and binds the credential path only after pre-credential checks", () => {
   const documents = cloneDocuments();
   documents.runDemo = documents.runDemo
-    .replace("依次运行当前生态适用的静态检查", "__BUILD_STEP__")
-    .replace("完整读取并执行 [cli.md](cli.md)", "依次运行当前生态适用的静态检查")
-    .replace("__BUILD_STEP__", "完整读取并执行 [cli.md](cli.md)");
-  assert.throws(() => validateCliProtocol(documents), /retrieve the credential path after build checks/);
+    .replace("先运行当前生态适用的测试、静态检查", "__PREFLIGHT_STEP__")
+    .replace("完整读取并执行 [cli.md](cli.md)", "先运行当前生态适用的测试、静态检查")
+    .replace("__PREFLIGHT_STEP__", "完整读取并执行 [cli.md](cli.md)");
+  assert.throws(() => validateCliProtocol(documents), /retrieve the credential path after pre-credential checks/);
+});
+
+test("forbids a separate prebuild when the credential launcher already builds", () => {
+  const documents = cloneDocuments();
+  documents.runDemo = documents.runDemo.replace(
+    "不得在此之前再运行普通 debug 或 release 构建",
+    "先运行普通 debug 和 release 构建",
+  );
+  assert.throws(() => validateCliProtocol(documents), /must not prebuild when the credential launcher already builds/);
+});
+
+test("counts the credential launcher build as the single build", () => {
+  const documents = cloneDocuments();
+  documents.runDemo = documents.runDemo.replace(
+    "该入口此时完成的构建就是本次唯一构建",
+    "启动后继续追加构建",
+  );
+  assert.throws(() => validateCliProtocol(documents), /as the single build/);
 });
 
 test("requires the skill entrypoint to prefer the credential launcher", () => {

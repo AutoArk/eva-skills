@@ -39,9 +39,11 @@ test("launches a confirmed Flutter Demo through EVA CLI and the AK launcher", ()
   assert.equal(flutterDemo.fixture.selection, "confirmed");
   assert.equal(flutterDemo.fixture.cliState, "authenticated");
   assert.equal(flutterDemo.fixture.keySave, "success");
+  assert(flutterDemo.expected.required.includes("count-credential-launcher-build-as-build-check"));
   assert(flutterDemo.expected.required.includes("check-eva-whoami"));
   assert(flutterDemo.expected.required.includes("pass-credential-path-to-documented-launcher"));
   assert(flutterDemo.expected.forbidden.includes("skip-cli-because-runtime-input-exists"));
+  assert(flutterDemo.expected.forbidden.includes("prebuild-before-build-capable-launcher"));
   assert(flutterDemo.expected.forbidden.includes("treat-credentialless-build-as-demo-start"));
   assert(flutterDemo.expected.forbidden.includes("use-ordinary-launcher-without-explicit-request"));
 });
@@ -69,6 +71,20 @@ test("forbids a confirmed Flutter Demo from falling back to the ordinary launche
   assert.throws(
     () => validateEvalSpec(spec),
     /confirmed Pub Demo must forbid use-ordinary-launcher-without-explicit-request/,
+  );
+});
+
+test("forbids a confirmed Flutter Demo from prebuilding before its launcher build", () => {
+  const spec = cloneSpec();
+  const flutterDemo = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-flutter-success-prefers-ak-launcher",
+  );
+  flutterDemo.expected.forbidden = flutterDemo.expected.forbidden.filter(
+    (behavior) => behavior !== "prebuild-before-build-capable-launcher",
+  );
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /confirmed Pub Demo must forbid a redundant prebuild/,
   );
 });
 

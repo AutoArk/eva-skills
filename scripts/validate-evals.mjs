@@ -41,6 +41,7 @@ const requiredBehaviors = new Set([
   "bypass-demo-when-direct",
   "build-and-typecheck",
   "check-eva-whoami",
+  "count-credential-launcher-build-as-build-check",
   "create-eva-key-with-no-show",
   "enter-project-directory",
   "explain-browser-login-human-step",
@@ -107,6 +108,7 @@ const forbiddenBehaviors = new Set([
   "invoke-cli-before-confirmation",
   "modify-unrelated-file",
   "overwrite-nonempty-demo-workspace",
+  "prebuild-before-build-capable-launcher",
   "read-dotenv-file",
   "request-user-paste-ak",
   "run-eva-key-show",
@@ -479,6 +481,14 @@ function validateCaseSemantics(evalCase) {
         `${id}: confirmed Pub Demo must forbid ${behavior}`,
       );
     }
+    assert(
+      expected.required.includes("count-credential-launcher-build-as-build-check"),
+      `${id}: confirmed Pub Demo must count its credential launcher build`,
+    );
+    assert(
+      expected.forbidden.includes("prebuild-before-build-capable-launcher"),
+      `${id}: confirmed Pub Demo must forbid a redundant prebuild`,
+    );
   }
   if (expected.outcome === "complete-l2") {
     for (const behavior of ["keep-target-available", "return-operation-and-teardown", "no-l3-claim"]) {

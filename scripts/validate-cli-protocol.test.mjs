@@ -88,6 +88,36 @@ test("retrieves and binds the credential path only after build checks", () => {
   assert.throws(() => validateCliProtocol(documents), /retrieve the credential path after build checks/);
 });
 
+test("requires the skill entrypoint to prefer the credential launcher", () => {
+  const documents = cloneDocuments();
+  documents.skill = documents.skill.replace(
+    "默认必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口",
+    "可以任选启动入口",
+  );
+  assert.throws(() => validateCliProtocol(documents), /must prefer the credential launcher/);
+});
+
+test("requires run-demo to select the AK launcher before execution", () => {
+  const documents = cloneDocuments();
+  documents.runDemo = documents.runDemo.replace(
+    "默认启动入口立即确定为凭证路径启动入口",
+    "稍后决定启动入口",
+  );
+  assert.throws(
+    () => validateCliProtocol(documents),
+    /must choose the credential launcher unless runtime AK input was explicitly requested/,
+  );
+});
+
+test("forbids silently falling back when the credential path is blocked", () => {
+  const documents = cloneDocuments();
+  documents.runDemo = documents.runDemo.replace(
+    "不得自动改用不带 AK 的普通启动入口",
+    "可以自动改用普通启动入口",
+  );
+  assert.throws(() => validateCliProtocol(documents), /must not silently downgrade/);
+});
+
 test("rejects exact CLI command duplication outside cli.md", () => {
   const documents = cloneDocuments();
   documents.runDemo += "\nRun `eva whoami` before continuing.\n";

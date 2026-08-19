@@ -110,6 +110,21 @@ export function validateCliProtocol(documents) {
     documents.runDemo.includes("其他入口启动的健康进程不能作为 L2"),
     "run-demo L2 must reject a healthy process started without the credential path",
   );
+  assert(
+    documents.skill.includes("同时提供凭证路径启动入口和不带凭证的普通启动入口")
+      && documents.skill.includes("默认必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口"),
+    "SKILL.md must prefer the credential launcher when both Demo launch modes exist",
+  );
+  assert(
+    documents.runDemo.includes("默认启动入口立即确定为凭证路径启动入口")
+      && documents.runDemo.includes("只有用户明确要求在运行时手工输入 AK 时"),
+    "run-demo must choose the credential launcher unless runtime AK input was explicitly requested",
+  );
+  assert(
+    documents.runDemo.includes("不得自动改用不带 AK 的普通启动入口")
+      && documents.runDemo.includes("不得擅自改为等待用户在设备端手工输入 AK"),
+    "run-demo must not silently downgrade when the EVA CLI credential path is blocked",
+  );
 
   const demoBuild = documents.runDemo.indexOf("依次运行当前生态适用的静态检查");
   const demoCli = documents.runDemo.indexOf("完整读取并执行 [cli.md](cli.md)", demoBuild + 1);

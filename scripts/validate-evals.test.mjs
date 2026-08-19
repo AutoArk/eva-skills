@@ -5,7 +5,7 @@ import { loadEvalSpec, validateEvalSpec } from "./validate-evals.mjs";
 
 test("accepts the repository eval catalog and its required coverage", () => {
   const result = validateEvalSpec(loadEvalSpec());
-  assert.deepEqual(result, { cases: 15, skill: "eva-sdk" });
+  assert.deepEqual(result, { cases: 16, skill: "eva-sdk" });
 });
 
 test("routes an unbranded voice-conversation Demo request through candidate confirmation", () => {
@@ -28,6 +28,48 @@ test("routes the Flutter Demo through the Pub candidate confirmation gate", () =
   assert.equal(flutterDemo.expected.route, "run-demo");
   assert.equal(flutterDemo.fixture.selection, "unique-unconfirmed");
   assert(flutterDemo.expected.required.includes("request-candidate-confirmation"));
+});
+
+test("launches a confirmed Flutter Demo through EVA CLI and the AK launcher", () => {
+  const spec = loadEvalSpec();
+  const flutterDemo = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-flutter-success-prefers-ak-launcher",
+  );
+  assert.equal(flutterDemo.fixture.catalog, "single-pub-demo");
+  assert.equal(flutterDemo.fixture.selection, "confirmed");
+  assert.equal(flutterDemo.fixture.cliState, "authenticated");
+  assert.equal(flutterDemo.fixture.keySave, "success");
+  assert(flutterDemo.expected.required.includes("check-eva-whoami"));
+  assert(flutterDemo.expected.required.includes("pass-credential-path-to-documented-launcher"));
+  assert(flutterDemo.expected.forbidden.includes("skip-cli-because-runtime-input-exists"));
+  assert(flutterDemo.expected.forbidden.includes("treat-credentialless-build-as-demo-start"));
+  assert(flutterDemo.expected.forbidden.includes("use-ordinary-launcher-without-explicit-request"));
+});
+
+test("requires a confirmed Pub Demo credential-launch regression case", () => {
+  const spec = cloneSpec();
+  const flutterDemo = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-flutter-success-prefers-ak-launcher",
+  );
+  flutterDemo.fixture.catalog = "single-npm-demo";
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /confirmed Pub Demo launched through the authenticated credential path/,
+  );
+});
+
+test("forbids a confirmed Flutter Demo from falling back to the ordinary launcher", () => {
+  const spec = cloneSpec();
+  const flutterDemo = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-flutter-success-prefers-ak-launcher",
+  );
+  flutterDemo.expected.forbidden = flutterDemo.expected.forbidden.filter(
+    (behavior) => behavior !== "use-ordinary-launcher-without-explicit-request",
+  );
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /confirmed Pub Demo must forbid use-ordinary-launcher-without-explicit-request/,
+  );
 });
 
 test("routes direct Flutter integration through the published SDK catalog", () => {

@@ -116,9 +116,12 @@ const forbiddenBehaviors = new Set([
   "stop-target-prematurely",
   "start-before-confirmation",
   "start-without-credential-path-after-key-success",
+  "skip-cli-because-runtime-input-exists",
+  "treat-credentialless-build-as-demo-start",
   "use-example-prerelease-tag",
   "use-example-version-for-direct-integration",
   "use-main",
+  "use-ordinary-launcher-without-explicit-request",
   "use-sdk-internal",
   "leave-floating-latest",
   "upgrade-existing-sdk-without-request",
@@ -168,6 +171,7 @@ export function validateEvalSpec(spec) {
   let hasVersionConflict = false;
   let hasSuccessCanary = false;
   let hasErrorCanary = false;
+  let hasConfirmedPubCredentialLaunch = false;
 
   for (const evalCase of spec.cases) {
     assertRecord(evalCase, "eval case");
@@ -242,6 +246,16 @@ export function validateEvalSpec(spec) {
     }
     if (fixture.keySave === "success" && fixture.akCanary === "hidden-file") hasSuccessCanary = true;
     if (fixture.keySave === "error" && fixture.akCanary === "hidden-file") hasErrorCanary = true;
+    if (
+      fixture.catalog === "single-pub-demo"
+      && fixture.selection === "confirmed"
+      && fixture.cliState === "authenticated"
+      && fixture.keySave === "success"
+      && expected.route === "run-demo"
+      && expected.outcome === "complete-l2"
+    ) {
+      hasConfirmedPubCredentialLaunch = true;
+    }
 
     validateCaseSemantics(evalCase);
   }
@@ -276,6 +290,10 @@ export function validateEvalSpec(spec) {
   assert(hasVersionConflict, "evals must cover an installed-version conflict");
   assert(hasSuccessCanary, "evals must cover a hidden AK canary on the success path");
   assert(hasErrorCanary, "evals must cover a hidden AK canary on the error path");
+  assert(
+    hasConfirmedPubCredentialLaunch,
+    "evals must cover a confirmed Pub Demo launched through the authenticated credential path",
+  );
 
   return { cases: spec.cases.length, skill: spec.skill };
 }
@@ -445,6 +463,22 @@ function validateCaseSemantics(evalCase) {
       expected.forbidden.includes("start-without-credential-path-after-key-success"),
       `${id}: successful .env save must forbid startup without that path`,
     );
+  }
+  if (
+    fixture.catalog === "single-pub-demo"
+    && fixture.selection === "confirmed"
+    && fixture.keySave === "success"
+  ) {
+    for (const behavior of [
+      "skip-cli-because-runtime-input-exists",
+      "treat-credentialless-build-as-demo-start",
+      "use-ordinary-launcher-without-explicit-request",
+    ]) {
+      assert(
+        expected.forbidden.includes(behavior),
+        `${id}: confirmed Pub Demo must forbid ${behavior}`,
+      );
+    }
   }
   if (expected.outcome === "complete-l2") {
     for (const behavior of ["keep-target-available", "return-operation-and-teardown", "no-l3-claim"]) {

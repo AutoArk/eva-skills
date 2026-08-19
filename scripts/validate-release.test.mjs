@@ -8,6 +8,7 @@ import {
   selectLatestStableTag,
   selectReferenceSource,
   validateCatalog,
+  validateDartPublicImports,
   validateInstalledPublicImports,
   validateReleaseSdkResolutions,
   validateReferenceSources,
@@ -67,7 +68,7 @@ test("requires a valid resolution policy and official repository", () => {
 
 test("release validation requires default SDK dependency resolution", () => {
   const sdks = validateSdkCatalog(loadSdkCatalog());
-  assert.equal(validateReleaseSdkResolutions(sdks).length, 2);
+  assert.equal(validateReleaseSdkResolutions(sdks).length, 3);
 
   const testSdks = structuredClone(sdks);
   testSdks[0].distribution.resolution = { mode: "version", value: "1.2.3" };
@@ -160,6 +161,51 @@ test("rejects non-public Python SDK imports", () => {
   writeFileSync(
     join(fixture.exampleRoot, "internal.py"),
     "from eva_client_sdk.internal import secret\n",
+  );
+  assert.throws(() => validateCatalog(fixture.root), /forbidden non-public SDK import/);
+});
+
+test("validates a Pub catalog, exact lock, checksum, and public Dart imports", () => {
+  const fixture = createPubFixture();
+  const examples = validateCatalog(fixture.root);
+  assert.equal(examples.length, 1);
+  assert.equal(examples[0].sdkVersion, "0.1.0");
+  assert.deepEqual(
+    validateDartPublicImports(fixture.exampleRoot, "autoark_eva_client_sdk"),
+    ["package:autoark_eva_client_sdk/autoark_eva_client_sdk.dart"],
+  );
+});
+
+test("rejects Pub manifest and lock version drift", () => {
+  const fixture = createPubFixture();
+  writeFileSync(
+    join(fixture.exampleRoot, "pubspec.yaml"),
+    fixture.pubspecText.replace("autoark_eva_client_sdk: 0.1.0", "autoark_eva_client_sdk: 0.1.1"),
+  );
+  assert.throws(() => validateCatalog(fixture.root), /pub lock SDK version drifted/);
+});
+
+test("rejects non-pub.dev sources and local Pub overrides", () => {
+  const registryFixture = createPubFixture();
+  writeFileSync(
+    join(registryFixture.exampleRoot, "pubspec.lock"),
+    registryFixture.lockText.replace("https://pub.dev", "https://example.com"),
+  );
+  assert.throws(() => validateCatalog(registryFixture.root), /must resolve from pub.dev/);
+
+  const overrideFixture = createPubFixture();
+  writeFileSync(
+    join(overrideFixture.exampleRoot, "pubspec_overrides.yaml"),
+    "dependency_overrides:\n  autoark_eva_client_sdk:\n    path: ../sdk\n",
+  );
+  assert.throws(() => validateCatalog(overrideFixture.root), /disable the local SDK override/);
+});
+
+test("rejects non-public Dart SDK imports", () => {
+  const fixture = createPubFixture();
+  writeFileSync(
+    join(fixture.exampleRoot, "lib", "internal.dart"),
+    "import 'package:autoark_eva_client_sdk/src/agent.dart';\n",
   );
   assert.throws(() => validateCatalog(fixture.root), /forbidden non-public SDK import/);
 });
@@ -312,6 +358,56 @@ source = { virtual = "." }
     "from eva_client_sdk import Eva\nfrom eva_client_sdk.contracts import StaticGreeting\nfrom eva_client_sdk.media import NativeAecProcessor\n",
   );
   return { exampleRoot, lockText, pyprojectText, root };
+}
+
+function createPubFixture() {
+  const root = mkdtempSync(join(tmpdir(), "eva-release-pub-test-"));
+  temporaryRoots.push(root);
+  const exampleRoot = join(root, "client-sdk", "flutter", "demo");
+  mkdirSync(join(exampleRoot, "lib"), { recursive: true });
+  const catalog = {
+    schemaVersion: 1,
+    examples: [{
+      id: "client-sdk-flutter-demo",
+      sdkFamily: "client-sdk",
+      language: "flutter",
+      platform: "mobile",
+      path: "client-sdk/flutter/demo",
+      sdk: { ecosystem: "pub", package: "autoark_eva_client_sdk" },
+      status: "release",
+    }],
+  };
+  const pubspecText = `name: fixture
+publish_to: "none"
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  autoark_eva_client_sdk: 0.1.0
+`;
+  const lockText = `packages:
+  autoark_eva_client_sdk:
+    dependency: "direct main"
+    description:
+      name: autoark_eva_client_sdk
+      sha256: "6c1533a29c7085776a812cf214e368159cdf4aceaac52cee2234107d7bec2d98"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
+`;
+  writeFileSync(join(root, "examples.json"), `${JSON.stringify(catalog, null, 2)}\n`);
+  writeFileSync(join(exampleRoot, "README.md"), "# Flutter Demo\n");
+  writeFileSync(join(exampleRoot, "pubspec.yaml"), pubspecText);
+  writeFileSync(join(exampleRoot, "pubspec.lock"), lockText);
+  writeFileSync(
+    join(exampleRoot, "lib", "main.dart"),
+    "import 'package:autoark_eva_client_sdk/autoark_eva_client_sdk.dart';\n",
+  );
+  return { exampleRoot, lockText, pubspecText, root };
 }
 
 function createReferenceSource() {

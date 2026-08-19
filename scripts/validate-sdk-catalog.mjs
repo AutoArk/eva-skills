@@ -7,7 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultCatalogPath = resolve(repositoryRoot, "skills/eva-sdk/sdk-catalog.json");
-const allowedPublicHosts = new Set(["www.npmjs.com", "pypi.org"]);
+const allowedPublicHosts = new Set(["www.npmjs.com", "pub.dev", "pypi.org"]);
+const exactVersionPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 
 export function loadSdkCatalog(path = defaultCatalogPath) {
   try {
@@ -84,7 +85,7 @@ export function validateNpmRegistryMetadata(sdk, metadata) {
   const resolved = metadata["dist-tags"][sdk.distribution.defaultChannel];
   assertNonEmptyString(resolved, `${sdk.id}: default channel must resolve`);
   assert(
-    /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(resolved),
+    exactVersionPattern.test(resolved),
     `${sdk.id}: default channel must resolve to an exact version`,
   );
   return resolved;
@@ -96,7 +97,22 @@ export function validatePyPiRegistryMetadata(sdk, metadata) {
   assert(metadata.info?.name === sdk.distribution.package, `${sdk.id}: registry package name drifted`);
   const resolved = metadata.info?.version;
   assertNonEmptyString(resolved, `${sdk.id}: default channel must resolve`);
-  assert(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(resolved), `${sdk.id}: default channel must resolve to an exact version`);
+  assert(exactVersionPattern.test(resolved), `${sdk.id}: default channel must resolve to an exact version`);
+  return resolved;
+}
+
+export function validatePubRegistryMetadata(sdk, metadata) {
+  assert(sdk.distribution.ecosystem === "pub", `${sdk.id}: SDK is not pub-distributed`);
+  assertRecord(metadata, `${sdk.id} registry metadata`);
+  assert(metadata.name === sdk.distribution.package, `${sdk.id}: registry package name drifted`);
+  assertRecord(metadata.latest, `${sdk.id} latest release`);
+  assert(
+    metadata.latest.pubspec?.name === sdk.distribution.package,
+    `${sdk.id}: latest pubspec package name drifted`,
+  );
+  const resolved = metadata.latest.version;
+  assertNonEmptyString(resolved, `${sdk.id}: default channel must resolve`);
+  assert(exactVersionPattern.test(resolved), `${sdk.id}: default channel must resolve to an exact version`);
   return resolved;
 }
 
@@ -105,7 +121,17 @@ export function queryLiveSdkMetadata(sdk) {
     const output = execFileSync("curl", ["-fsSL", `https://pypi.org/pypi/${sdk.distribution.package}/json`], { encoding: "utf8" });
     return JSON.parse(output);
   }
-  if (sdk.distribution.ecosystem !== "npm") throw new Error(`${sdk.id}: unsupported live distribution ${sdk.distribution.ecosystem}`);
+  if (sdk.distribution.ecosystem === "pub") {
+    const output = execFileSync(
+      "curl",
+      ["-fsSL", `https://pub.dev/api/packages/${sdk.distribution.package}`],
+      { encoding: "utf8" },
+    );
+    return JSON.parse(output);
+  }
+  if (sdk.distribution.ecosystem !== "npm") {
+    throw new Error(`${sdk.id}: unsupported live distribution ${sdk.distribution.ecosystem}`);
+  }
   const output = execFileSync(
     "npm",
     ["view", sdk.distribution.package, "name", "dist-tags", "--json"],
@@ -122,20 +148,29 @@ function validateDistribution(sdk) {
     ["ecosystem", "package", "resolution", "defaultChannel", "publicUrl"],
     `${sdk.id}.distribution`,
   );
-  if (!["npm", "pypi"].includes(distribution.ecosystem)) {
+  if (!["npm", "pub", "pypi"].includes(distribution.ecosystem)) {
     throw new Error(`${sdk.id}: unsupported distribution ecosystem ${distribution.ecosystem}`);
   }
-  const packagePattern = distribution.ecosystem === "npm"
-    ? /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/
-    : /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+  const packagePatterns = {
+    npm: /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/,
+    pub: /^[a-z][a-z0-9_]*$/,
+    pypi: /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
+  };
+  const packagePattern = packagePatterns[distribution.ecosystem];
   assert(packagePattern.test(distribution.package), `${sdk.id}: invalid ${distribution.ecosystem} package`);
   assert(distribution.defaultChannel === "latest", `${sdk.id}: default channel must be latest`);
   validateResolution(distribution.resolution, `${sdk.id}.distribution.resolution`);
   validatePublicUrl(distribution.publicUrl, `${sdk.id}.distribution.publicUrl`);
-  const expectedUrl = distribution.ecosystem === "npm"
-    ? `https://www.npmjs.com/package/${distribution.package}`
-    : `https://pypi.org/project/${distribution.package}/`;
-  assert(distribution.publicUrl === expectedUrl, `${sdk.id}: npm public URL must be ${expectedUrl}`);
+  const expectedUrls = {
+    npm: `https://www.npmjs.com/package/${distribution.package}`,
+    pub: `https://pub.dev/packages/${distribution.package}`,
+    pypi: `https://pypi.org/project/${distribution.package}/`,
+  };
+  const expectedUrl = expectedUrls[distribution.ecosystem];
+  assert(
+    distribution.publicUrl === expectedUrl,
+    `${sdk.id}: ${distribution.ecosystem} public URL must be ${expectedUrl}`,
+  );
 }
 
 function validateResolution(resolution, label) {
@@ -214,9 +249,12 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
     if (options.live) {
       for (const sdk of sdks) {
         const metadata = queryLiveSdkMetadata(sdk);
-        const exact = sdk.distribution.ecosystem === "npm"
-          ? validateNpmRegistryMetadata(sdk, metadata)
-          : validatePyPiRegistryMetadata(sdk, metadata);
+        const validators = {
+          npm: validateNpmRegistryMetadata,
+          pub: validatePubRegistryMetadata,
+          pypi: validatePyPiRegistryMetadata,
+        };
+        const exact = validators[sdk.distribution.ecosystem](sdk, metadata);
         resolved.push(`${sdk.id}:${sdk.distribution.defaultChannel}->${exact}`);
       }
     }

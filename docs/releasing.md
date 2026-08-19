@@ -93,6 +93,8 @@ node scripts/validate-release.mjs
 
 `validate-release.mjs` 的正式发布检查不使用 `--skip-build`，需要解析官方 examples 最新稳定 tag、记录 commit、恢复依赖并完成构建。
 
+当稳定 examples catalog 包含 Flutter mobile Demo 时，完整检查还需要与 example `pubspec.yaml` 匹配的 Flutter/Dart、Java 17、Android SDK，以及 macOS 上的 Xcode 与 CocoaPods。检查会执行 Android release 构建，并在 macOS 上执行不签名的 iOS release 构建；后者只证明 iOS 工程可编译，不替代开发者签名、安装和目标真机验收。`--skip-build` 只校验公开来源、catalog、manifest、lockfile 与公共 import，不得作为平台构建完成证据。
+
 如果本次修改影响 Demo 选择、SDK 接入、EVA CLI、登录、AK 传递或真实运行行为，还必须在全新临时目录进行对应场景验收。`eva login` 会打开浏览器，只有维护者本人参与时才执行；不得把无法自动完成的登录步骤伪装成已验证。
 
 ### 5. 形成候选 commit

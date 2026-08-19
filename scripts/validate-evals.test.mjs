@@ -5,7 +5,7 @@ import { loadEvalSpec, validateEvalSpec } from "./validate-evals.mjs";
 
 test("accepts the repository eval catalog and its required coverage", () => {
   const result = validateEvalSpec(loadEvalSpec());
-  assert.deepEqual(result, { cases: 13, skill: "eva-sdk" });
+  assert.deepEqual(result, { cases: 15, skill: "eva-sdk" });
 });
 
 test("routes an unbranded voice-conversation Demo request through candidate confirmation", () => {
@@ -17,6 +17,28 @@ test("routes an unbranded voice-conversation Demo request through candidate conf
   assert.equal(voiceDemo.expected.route, "run-demo");
   assert.equal(voiceDemo.fixture.selection, "ambiguous");
   assert(voiceDemo.expected.required.includes("request-candidate-confirmation"));
+});
+
+test("routes the Flutter Demo through the Pub candidate confirmation gate", () => {
+  const spec = loadEvalSpec();
+  const flutterDemo = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-flutter-unique-candidate-still-confirms",
+  );
+  assert.equal(flutterDemo.fixture.catalog, "single-pub-demo");
+  assert.equal(flutterDemo.expected.route, "run-demo");
+  assert.equal(flutterDemo.fixture.selection, "unique-unconfirmed");
+  assert(flutterDemo.expected.required.includes("request-candidate-confirmation"));
+});
+
+test("routes direct Flutter integration through the published SDK catalog", () => {
+  const spec = loadEvalSpec();
+  const flutterIntegration = spec.cases.find(
+    (evalCase) => evalCase.id === "integrate-flutter-direct-from-pub",
+  );
+  assert.equal(flutterIntegration.fixture.integrationSource, "direct-sdk");
+  assert.equal(flutterIntegration.expected.route, "integrate");
+  assert(flutterIntegration.expected.required.includes("resolve-latest-from-official-distribution"));
+  assert(flutterIntegration.expected.forbidden.includes("require-demo-baseline"));
 });
 
 test("rejects duplicate case ids", () => {

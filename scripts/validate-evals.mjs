@@ -9,7 +9,13 @@ const defaultEvalPath = resolve(repositoryRoot, "evals/eva-sdk.json");
 
 const routes = new Set(["customize", "integrate", "run-demo"]);
 const outcomes = new Set(["blocked", "complete", "complete-l2", "needs-confirmation", "unavailable"]);
-const catalogs = new Set(["missing-requested-route", "multiple-demos", "not-used", "single-npm-demo"]);
+const catalogs = new Set([
+  "missing-requested-route",
+  "multiple-demos",
+  "not-used",
+  "single-npm-demo",
+  "single-pub-demo",
+]);
 const sdkCatalogs = new Set(["missing-requested-sdk", "multiple-sdks", "not-used", "single-sdk"]);
 const integrationSources = new Set(["direct-sdk", "example", "existing-project", "not-applicable"]);
 const selectionModes = new Set([

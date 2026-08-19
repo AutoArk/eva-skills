@@ -60,6 +60,7 @@ CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 | --- | --- | --- |
 | Client SDK | TypeScript / Browser | [`@autoark-ai/eva-client-sdk-ts`](https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts) |
 | Client SDK | Python | [`autoark-eva-client-sdk`](https://pypi.org/project/autoark-eva-client-sdk/) |
+| Client SDK | Flutter / Android、iOS | [`autoark_eva_client_sdk`](https://pub.dev/packages/autoark_eva_client_sdk) |
 
 SDK catalog 不保存版本号。依赖选择由各 source/distribution 的 `resolution` 控制；默认从官方 distribution 的 `latest` channel 解析精确版本并锁定，测试时可临时指定 examples tag/branch 或 SDK 精确版本。模式说明见 [`dependency-resolution.md`](skills/eva-sdk/dependency-resolution.md)。
 

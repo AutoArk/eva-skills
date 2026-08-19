@@ -50,6 +50,36 @@
           "url": "https://pypi.org/project/autoark-eva-client-sdk/"
         }
       ]
+    },
+    {
+      "id": "client-sdk-flutter",
+      "sdkFamily": "client-sdk",
+      "language": "flutter",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "status": "published",
+      "description": "EVA 实时语音对话 Flutter SDK，支持 Android 与 iOS。",
+      "distribution": {
+        "ecosystem": "pub",
+        "package": "autoark_eva_client_sdk",
+        "resolution": {
+          "mode": "latest-version"
+        },
+        "defaultChannel": "latest",
+        "publicUrl": "https://pub.dev/packages/autoark_eva_client_sdk"
+      },
+      "documentation": [
+        {
+          "kind": "package-readme",
+          "url": "https://pub.dev/packages/autoark_eva_client_sdk"
+        },
+        {
+          "kind": "api-reference",
+          "url": "https://pub.dev/documentation/autoark_eva_client_sdk/latest/"
+        }
+      ]
     }
   ]
 }

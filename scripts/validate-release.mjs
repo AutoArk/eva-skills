@@ -2,6 +2,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -28,8 +29,9 @@ const allowedWebHosts = new Set(["eva.autoarkai.com"]);
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const referenceSourcesPath = join(repositoryRoot, "skills/eva-sdk/reference-sources.json");
 const pythonExampleInspectorPath = join(repositoryRoot, "scripts/inspect-python-example.py");
-const sourceExtensions = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
-const ignoredSourceDirectories = new Set([".git", "dist", "node_modules"]);
+const exactVersionPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+const sourceExtensions = new Set([".cjs", ".dart", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
+const ignoredSourceDirectories = new Set([".dart_tool", ".git", "build", "dist", "node_modules"]);
 
 export function loadJson(path, label = path) {
   try {
@@ -185,11 +187,58 @@ export function validateCatalog(examplesRoot, catalogPath = "examples.json") {
     assertNonEmptyString(example.sdk.ecosystem, `${example.id}.sdk.ecosystem`);
 
     if (example.sdk.ecosystem === "npm") validated.push(validateNpmExample(exampleRoot, example));
+    else if (example.sdk.ecosystem === "pub") validated.push(validatePubExample(exampleRoot, example));
     else if (example.sdk.ecosystem === "pypi") validated.push(validatePyPiExample(exampleRoot, example));
     else throw new Error(`${example.id}: unsupported SDK ecosystem ${example.sdk.ecosystem}`);
   }
 
   return validated;
+}
+
+export function validatePubExample(exampleRoot, example) {
+  assertNonEmptyString(example.sdk.package, `${example.id}.sdk.package`);
+  const manifestPath = join(exampleRoot, "pubspec.yaml");
+  const lockPath = join(exampleRoot, "pubspec.lock");
+  const overridePath = join(exampleRoot, "pubspec_overrides.yaml");
+  assertFile(manifestPath, `${example.id} pubspec.yaml`);
+  assertFile(lockPath, `${example.id} pubspec.lock`);
+  assert(!existsSync(overridePath), `${example.id}: disable the local SDK override before validation`);
+
+  const manifestText = readFileSync(manifestPath, "utf8");
+  const lockText = readFileSync(lockPath, "utf8");
+  const sdkPackage = example.sdk.package;
+  const dependencyPattern = new RegExp(
+    `^  ${escapeRegExp(sdkPackage)}:\\s*(${exactVersionPattern.source.slice(1, -1)})\\s*$`,
+    "m",
+  );
+  const sdkVersion = dependencyPattern.exec(manifestText)?.[1];
+
+  assert(/^publish_to:\s*["']?none["']?\s*$/m.test(manifestText), `${example.id}: demo must not be publishable`);
+  assert(
+    typeof sdkVersion === "string" && exactVersionPattern.test(sdkVersion),
+    `${example.id}: SDK dependency must use an exact pub version`,
+  );
+
+  const locked = inspectPubLockPackage(lockText, sdkPackage);
+  assert(locked.version === sdkVersion, `${example.id}: pub lock SDK version drifted`);
+  assert(locked.source === "hosted", `${example.id}: SDK lock source must be hosted`);
+  assert(locked.url === "https://pub.dev", `${example.id}: SDK lock must resolve from pub.dev`);
+  assert(/^[0-9a-f]{64}$/.test(locked.sha256 ?? ""), `${example.id}: SDK lock must pin a SHA-256`);
+  assert(!/^    source: (?:git|path)\s*$/m.test(lockText), `${example.id}: lockfile contains a local source`);
+  assert(
+    !/(?:\.\.[/\\]|\/Users\/|[A-Za-z]:\\\\|workspace:)/.test(lockText),
+    `${example.id}: lockfile contains a local dependency path`,
+  );
+
+  const publicImports = validateDartPublicImports(exampleRoot, sdkPackage);
+  return {
+    ecosystem: "pub",
+    example,
+    exampleRoot,
+    sdkPackage,
+    sdkVersion,
+    publicImports,
+  };
 }
 
 export function validatePyPiExample(exampleRoot, example) {
@@ -241,7 +290,7 @@ export function validateNpmExample(exampleRoot, example) {
   assertNonEmptyString(manifest.scripts?.build, `${example.id}: build script`);
   assertNonEmptyString(manifest.scripts?.["dev:key-file"], `${example.id}: dev:key-file script`);
   assert(
-    typeof sdkVersion === "string" && /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(sdkVersion),
+    typeof sdkVersion === "string" && exactVersionPattern.test(sdkVersion),
     `${example.id}: SDK dependency must use an exact registry version`,
   );
   assert(
@@ -266,6 +315,20 @@ export function validateNpmExample(exampleRoot, example) {
     sdkPackage,
     sdkVersion,
   };
+}
+
+export function validateDartPublicImports(exampleRoot, sdkPackage) {
+  const packagePrefix = `package:${sdkPackage}/`;
+  const imports = collectSourceImports(exampleRoot)
+    .filter((specifier) => specifier === `package:${sdkPackage}` || specifier.startsWith(packagePrefix));
+  assert(imports.length > 0, `example does not import package:${sdkPackage}`);
+  for (const specifier of imports) {
+    assert(
+      specifier.startsWith(packagePrefix) && !specifier.slice(packagePrefix.length).startsWith("src/"),
+      `forbidden non-public SDK import: ${specifier}`,
+    );
+  }
+  return [...new Set(imports)].sort();
 }
 
 export function validateInstalledPublicImports(exampleRoot, sdkPackage) {
@@ -348,9 +411,25 @@ export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = 
     if (!skipBuild) {
       for (const item of examples) {
         if (item.ecosystem === "pypi") continue;
-        run("npm", ["ci"], { cwd: item.exampleRoot });
-        validateInstalledPublicImports(item.exampleRoot, item.sdkPackage);
-        run("npm", ["run", "build"], { cwd: item.exampleRoot });
+        if (item.ecosystem === "npm") {
+          run("npm", ["ci"], { cwd: item.exampleRoot });
+          validateInstalledPublicImports(item.exampleRoot, item.sdkPackage);
+          run("npm", ["run", "build"], { cwd: item.exampleRoot });
+          continue;
+        }
+        if (item.ecosystem === "pub") {
+          run("flutter", ["pub", "get", "--enforce-lockfile"], { cwd: item.exampleRoot });
+          run("flutter", ["analyze"], { cwd: item.exampleRoot });
+          run("flutter", ["test"], { cwd: item.exampleRoot });
+          run("flutter", ["build", "apk", "--release"], { cwd: item.exampleRoot });
+          assert(
+            process.platform === "darwin",
+            `${item.example.id}: Flutter mobile release validation requires macOS for the iOS build`,
+          );
+          run("flutter", ["build", "ios", "--release", "--no-codesign"], { cwd: item.exampleRoot });
+          continue;
+        }
+        throw new Error(`${item.example.id}: unsupported build ecosystem ${item.ecosystem}`);
       }
     }
 
@@ -389,6 +468,29 @@ function isExportedSubpath(subpath, exportedSubpaths) {
     if (star === -1) return false;
     return subpath.startsWith(pattern.slice(0, star)) && subpath.endsWith(pattern.slice(star + 1));
   });
+}
+
+function inspectPubLockPackage(lockText, packageName) {
+  const normalized = lockText.replace(/\r\n?/g, "\n");
+  const block = new RegExp(
+    `^  ${escapeRegExp(packageName)}:\\n((?: {4,}.*\\n)+)`,
+    "m",
+  ).exec(normalized)?.[1];
+  assert(typeof block === "string", `pub lock is missing ${packageName}`);
+  const value = (field) => new RegExp(
+    `^ {4,}${field}: ["']?([^"'\\n]+)["']?\\s*$`,
+    "m",
+  ).exec(block)?.[1];
+  return {
+    sha256: value("sha256"),
+    source: value("source"),
+    url: value("url"),
+    version: value("version"),
+  };
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function resolveWithin(root, relativePath, label) {

@@ -28,6 +28,21 @@ test("requires whoami verification after browser login", () => {
   assert.throws(() => validateCliProtocol(documents), /whoami must verify browser login/);
 });
 
+test("retries a sandbox unauthenticated result once before opening browser login", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace(
+    "仅重试一次相同的 `eva whoami`",
+    "重试登录状态",
+  );
+  assert.throws(() => validateCliProtocol(documents), /must retry a sandbox unauthenticated result once/);
+});
+
+test("verifies browser login in the same user-session context", () => {
+  const documents = cloneDocuments();
+  documents.cli = documents.cli.replace("执行登录的同一获批上下文", "普通上下文");
+  assert.throws(() => validateCliProtocol(documents), /must verify browser login in the login context/);
+});
+
 test("rejects eva key create without --no-show-key", () => {
   const documents = cloneDocuments();
   documents.cli = documents.cli.replace(

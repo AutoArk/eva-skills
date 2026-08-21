@@ -73,6 +73,7 @@ const requiredBehaviors = new Set([
   "return-operation-and-teardown",
   "resolve-latest-from-official-distribution",
   "resolve-latest-stable-example-tag",
+  "retry-eva-whoami-with-user-session-access",
   "require-whoami-recheck-after-login",
   "save-eva-key-to-dotenv",
   "select-from-catalog",
@@ -399,6 +400,7 @@ function validateCaseSemantics(evalCase) {
     assert(expected.outcome === "needs-confirmation", `${id}: browser login must wait for the user`);
     for (const behavior of [
       "check-eva-whoami",
+      "retry-eva-whoami-with-user-session-access",
       "explain-browser-login-human-step",
       "start-eva-login",
       "wait-for-browser-login",

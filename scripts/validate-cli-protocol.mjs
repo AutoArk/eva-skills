@@ -60,6 +60,20 @@ export function validateCliProtocol(documents) {
   assert(documents.cli.includes("等待用户明确确认"), "CLI install must wait for explicit user confirmation");
   assert(documents.cli.includes("打开浏览器"), "eva login must disclose that it opens a browser");
   assert(documents.cli.includes("用户亲自完成"), "browser login must require human participation");
+  assert(
+    documents.cli.includes("首次在受限或沙箱上下文中得到的未登录结果")
+      && documents.cli.includes("可访问本机用户 CLI 会话的获批上下文")
+      && documents.cli.includes("仅重试一次相同的 `eva whoami`"),
+    "CLI workflow must retry a sandbox unauthenticated result once with user-session access",
+  );
+  assert(
+    documents.cli.includes("执行登录的同一获批上下文"),
+    "CLI workflow must verify browser login in the login context",
+  );
+  assert(
+    documents.cli.includes("用户完成后再次运行 `eva whoami`"),
+    "whoami must verify browser login",
+  );
   assert(documents.cli.includes("/private/tmp/cliTest"), "CLI reference must retain the owner-provided workspace example");
   assert(documents.cli.includes("`cd -- <绝对项目目录>`"), "CLI workflow must cd into the project directory first");
   assert(

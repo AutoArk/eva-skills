@@ -197,6 +197,15 @@ test("browser login cannot be treated as complete before whoami recheck", () => 
   assert.throws(() => validateEvalSpec(spec), /unauthenticated CLI requires require-whoami-recheck-after-login/);
 });
 
+test("unauthenticated CLI retries once with access to the user CLI session", () => {
+  const spec = cloneSpec();
+  const login = spec.cases.find((evalCase) => evalCase.id === "run-demo-login-browser-requires-human");
+  login.expected.required = login.expected.required.filter(
+    (behavior) => behavior !== "retry-eva-whoami-with-user-session-access",
+  );
+  assert.throws(() => validateEvalSpec(spec), /requires retry-eva-whoami-with-user-session-access/);
+});
+
 test("key setup requires entering the project directory", () => {
   const spec = cloneSpec();
   const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");

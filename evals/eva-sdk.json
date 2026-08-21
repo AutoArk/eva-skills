@@ -226,6 +226,7 @@
           "select-from-catalog",
           "use-task-temp-demo-workspace",
           "check-eva-whoami",
+          "retry-eva-whoami-with-user-session-access",
           "explain-browser-login-human-step",
           "start-eva-login",
           "wait-for-browser-login",

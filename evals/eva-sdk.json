@@ -3,8 +3,8 @@
   "skill": "eva-sdk",
   "cases": [
     {
-      "id": "run-demo-unbranded-voice-request-lists-candidates",
-      "prompt": "帮我启动一个语音对话 demo。",
+      "id": "run-demo-eva-context-voice-request-lists-candidates",
+      "prompt": "在这个 EVA SDK 项目里，帮我启动一个语音对话 Demo。",
       "fixture": {
         "catalog": "multiple-demos",
         "sdkCatalog": "not-used",
@@ -50,6 +50,37 @@
       }
     },
     {
+      "id": "unbranded-voice-demo-without-eva-context-does-not-route",
+      "prompt": "帮我启动一个语音对话 Demo。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "not-used",
+        "integrationSource": "not-applicable",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "none"
+      },
+      "expected": {
+        "route": "not-applicable",
+        "outcome": "not-applicable",
+        "required": [
+          "avoid-eva-sdk-routing"
+        ],
+        "forbidden": [
+          "invoke-eva-sdk-workflow",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak"
+        ]
+      }
+    },
+    {
       "id": "run-demo-unique-candidate-still-confirms",
       "prompt": "我要 Client SDK、TypeScript、Browser 的 Demo。",
       "fixture": {
@@ -90,6 +121,208 @@
           "request-user-paste-ak",
           "invoke-cli-before-confirmation",
           "clone-final-before-workspace-choice",
+          "restore-dependencies-before-confirmation",
+          "start-before-confirmation",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "run-demo-explicit-id-and-empty-directory-reuses-authorization",
+      "prompt": "运行 EVA example `client-sdk-ts-browser`，把 immutable examples 快照放到绝对空目录 `/private/tmp/eva-client-sdk-ts-browser`；匹配后直接继续。",
+      "fixture": {
+        "catalog": "single-npm-demo",
+        "sdkCatalog": "not-used",
+        "integrationSource": "not-applicable",
+        "selection": "request-authorized",
+        "demoWorkspace": "user-directory",
+        "cliState": "authenticated",
+        "keyInventory": "existing",
+        "keySave": "success",
+        "akCanary": "hidden-file",
+        "targetProject": "none"
+      },
+      "expected": {
+        "route": "run-demo",
+        "outcome": "complete-l2",
+        "required": [
+          "read-example-source-policy",
+          "resolve-latest-stable-example-tag",
+          "pin-resolved-example-commit",
+          "select-from-catalog",
+          "present-candidate-details",
+          "reuse-explicit-demo-authorization",
+          "use-user-selected-demo-workspace",
+          "verify-empty-demo-destination",
+          "use-native-lockfile",
+          "check-eva-whoami",
+          "enter-project-directory",
+          "list-eva-keys",
+          "save-eva-key-to-dotenv",
+          "treat-dotenv-path-as-opaque",
+          "pass-credential-path-to-documented-launcher",
+          "build-and-typecheck",
+          "keep-target-available",
+          "return-operation-and-teardown",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "repeat-candidate-confirmation",
+          "use-main",
+          "use-example-prerelease-tag",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "invoke-cli-before-confirmation",
+          "overwrite-nonempty-demo-workspace",
+          "restore-dependencies-before-confirmation",
+          "start-before-confirmation",
+          "start-without-credential-path-after-key-success",
+          "create-eva-key-when-existing",
+          "use-obsolete-eva-init",
+          "use-obsolete-eva-key-path",
+          "stop-target-prematurely",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "run-demo-explicit-id-without-directory-still-pauses",
+      "prompt": "运行 EVA example `client-sdk-ts-browser`。",
+      "fixture": {
+        "catalog": "single-npm-demo",
+        "sdkCatalog": "not-used",
+        "integrationSource": "not-applicable",
+        "selection": "request-authorized",
+        "demoWorkspace": "unresolved",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "none"
+      },
+      "expected": {
+        "route": "run-demo",
+        "outcome": "needs-confirmation",
+        "required": [
+          "read-example-source-policy",
+          "resolve-latest-stable-example-tag",
+          "pin-resolved-example-commit",
+          "select-from-catalog",
+          "present-candidate-details",
+          "present-demo-workspace-options",
+          "request-demo-workspace-choice",
+          "wait-for-demo-workspace-choice",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "repeat-candidate-confirmation",
+          "use-main",
+          "use-example-prerelease-tag",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "invoke-cli-before-confirmation",
+          "clone-final-before-workspace-choice",
+          "restore-dependencies-before-confirmation",
+          "start-before-confirmation",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "run-demo-local-snapshot-identity-change-invalidates-authorization",
+      "prompt": "继续之前已授权到 `/private/tmp/eva-client-sdk-ts-browser` 的 EVA Demo，但本地 snapshot HEAD 或内容身份已经变化。",
+      "fixture": {
+        "catalog": "single-npm-demo",
+        "sdkCatalog": "not-used",
+        "integrationSource": "not-applicable",
+        "selection": "identity-changed",
+        "demoWorkspace": "user-directory",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "none"
+      },
+      "expected": {
+        "route": "run-demo",
+        "outcome": "needs-confirmation",
+        "required": [
+          "read-example-source-policy",
+          "resolve-latest-stable-example-tag",
+          "pin-resolved-example-commit",
+          "select-from-catalog",
+          "present-candidate-details",
+          "report-snapshot-identity-change",
+          "request-candidate-confirmation",
+          "wait-for-confirmation",
+          "use-user-selected-demo-workspace",
+          "verify-empty-demo-destination",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "reuse-stale-demo-authorization",
+          "use-main",
+          "use-example-prerelease-tag",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "invoke-cli-before-confirmation",
+          "overwrite-nonempty-demo-workspace",
+          "restore-dependencies-before-confirmation",
+          "start-before-confirmation",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "run-demo-nonempty-directory-does-not-reuse-authorization",
+      "prompt": "运行 EVA example `client-sdk-ts-browser`，目标绝对目录是 `/private/tmp/eva-client-sdk-ts-browser`，但只读检查发现目录非空。",
+      "fixture": {
+        "catalog": "single-npm-demo",
+        "sdkCatalog": "not-used",
+        "integrationSource": "not-applicable",
+        "selection": "request-authorized",
+        "demoWorkspace": "user-directory-nonempty",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "none"
+      },
+      "expected": {
+        "route": "run-demo",
+        "outcome": "needs-confirmation",
+        "required": [
+          "read-example-source-policy",
+          "resolve-latest-stable-example-tag",
+          "pin-resolved-example-commit",
+          "select-from-catalog",
+          "present-candidate-details",
+          "report-nonempty-demo-destination",
+          "request-demo-workspace-choice",
+          "wait-for-demo-workspace-choice",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "reuse-demo-authorization-with-nonempty-directory",
+          "use-main",
+          "use-example-prerelease-tag",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "invoke-cli-before-confirmation",
+          "clone-final-before-workspace-choice",
+          "overwrite-nonempty-demo-workspace",
           "restore-dependencies-before-confirmation",
           "start-before-confirmation",
           "claim-l3"
@@ -179,6 +412,7 @@
           "select-from-catalog",
           "use-task-temp-demo-workspace",
           "check-eva-whoami",
+          "preflight-cli-availability-before-dependencies",
           "report-cli-missing",
           "present-official-cli-install",
           "request-cli-install-confirmation",
@@ -197,6 +431,7 @@
           "restore-dependencies-before-confirmation",
           "start-before-confirmation",
           "install-cli-before-confirmation",
+          "restore-dependencies-before-cli-preflight",
           "claim-l3"
         ]
       }

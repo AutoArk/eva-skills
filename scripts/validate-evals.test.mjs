@@ -5,18 +5,63 @@ import { loadEvalSpec, validateEvalSpec } from "./validate-evals.mjs";
 
 test("accepts the repository eval catalog and its required coverage", () => {
   const result = validateEvalSpec(loadEvalSpec());
-  assert.deepEqual(result, { cases: 16, skill: "eva-sdk" });
+  assert.deepEqual(result, { cases: 21, skill: "eva-sdk" });
 });
 
-test("routes an unbranded voice-conversation Demo request through candidate confirmation", () => {
-  const spec = loadEvalSpec();
-  const voiceDemo = spec.cases.find(
-    (evalCase) => evalCase.id === "run-demo-unbranded-voice-request-lists-candidates",
+test("requires the exact Demo request to carry the reusable authorization behavior", () => {
+  const spec = cloneSpec();
+  const exact = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-explicit-id-and-empty-directory-reuses-authorization",
   );
-  assert.match(voiceDemo.prompt, /语音对话\s+demo/i);
-  assert.equal(voiceDemo.expected.route, "run-demo");
-  assert.equal(voiceDemo.fixture.selection, "ambiguous");
-  assert(voiceDemo.expected.required.includes("request-candidate-confirmation"));
+  exact.expected.required = exact.expected.required.filter(
+    (behavior) => behavior !== "reuse-explicit-demo-authorization",
+  );
+  assert.throws(() => validateEvalSpec(spec), /exact request authorization must be reused/);
+});
+
+test("rejects repeated candidate or workspace confirmation on a reusable Demo authorization", () => {
+  const spec = cloneSpec();
+  const exact = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-explicit-id-and-empty-directory-reuses-authorization",
+  );
+  exact.expected.required.push("request-candidate-confirmation");
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /reusable Demo authorization must not also require request-candidate-confirmation/,
+  );
+});
+
+test("requires an exact Demo request without a directory to wait for a workspace choice", () => {
+  const spec = cloneSpec();
+  const missingDirectory = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-explicit-id-without-directory-still-pauses",
+  );
+  missingDirectory.expected.required = missingDirectory.expected.required.filter(
+    (behavior) => behavior !== "request-demo-workspace-choice",
+  );
+  assert.throws(() => validateEvalSpec(spec), /unresolved Demo workspace requires request-demo-workspace-choice/);
+});
+
+test("requires a changed immutable snapshot to invalidate prior Demo authorization", () => {
+  const spec = cloneSpec();
+  const changed = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-local-snapshot-identity-change-invalidates-authorization",
+  );
+  changed.expected.forbidden = changed.expected.forbidden.filter(
+    (behavior) => behavior !== "reuse-stale-demo-authorization",
+  );
+  assert.throws(() => validateEvalSpec(spec), /changed identity must invalidate prior Demo authorization/);
+});
+
+test("requires a non-empty custom directory to retain overwrite protection", () => {
+  const spec = cloneSpec();
+  const nonempty = spec.cases.find(
+    (evalCase) => evalCase.id === "run-demo-nonempty-directory-does-not-reuse-authorization",
+  );
+  nonempty.expected.forbidden = nonempty.expected.forbidden.filter(
+    (behavior) => behavior !== "reuse-demo-authorization-with-nonempty-directory",
+  );
+  assert.throws(() => validateEvalSpec(spec), /non-empty Demo workspace must forbid/);
 });
 
 test("routes the Flutter Demo through the Pub candidate confirmation gate", () => {
@@ -142,7 +187,7 @@ test("examples workflow resolves the latest stable tag and pins its commit", () 
 test("forbids CLI, dependency restore, and startup before candidate confirmation", () => {
   const spec = cloneSpec();
   const ambiguous = spec.cases.find(
-    (evalCase) => evalCase.id === "run-demo-unbranded-voice-request-lists-candidates",
+    (evalCase) => evalCase.id === "run-demo-eva-context-voice-request-lists-candidates",
   );
   ambiguous.expected.forbidden = ambiguous.expected.forbidden.filter(
     (behavior) => behavior !== "invoke-cli-before-confirmation",
@@ -248,7 +293,7 @@ test("Demo confirmation also requires a final workspace choice", () => {
   unique.expected.required = unique.expected.required.filter(
     (behavior) => behavior !== "request-demo-workspace-choice",
   );
-  assert.throws(() => validateEvalSpec(spec), /selection gate requires request-demo-workspace-choice/);
+  assert.throws(() => validateEvalSpec(spec), /unresolved Demo workspace requires request-demo-workspace-choice/);
 });
 
 test("user-selected Demo destination cannot overwrite a non-empty directory", () => {

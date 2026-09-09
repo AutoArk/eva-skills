@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultEvalPath = resolve(repositoryRoot, "evals/eva-sdk.json");
 
-const routes = new Set(["customize", "integrate", "run-demo"]);
-const outcomes = new Set(["blocked", "complete", "complete-l2", "needs-confirmation", "unavailable"]);
+const routes = new Set(["customize", "integrate", "not-applicable", "run-demo"]);
+const outcomes = new Set(["blocked", "complete", "complete-l2", "needs-confirmation", "not-applicable", "unavailable"]);
 const catalogs = new Set([
   "missing-requested-route",
   "multiple-demos",
@@ -21,11 +21,19 @@ const integrationSources = new Set(["direct-sdk", "example", "existing-project",
 const selectionModes = new Set([
   "ambiguous",
   "confirmed",
+  "identity-changed",
   "not-applicable",
+  "request-authorized",
   "unavailable",
   "unique-unconfirmed",
 ]);
-const demoWorkspaceModes = new Set(["not-applicable", "task-temp", "unresolved", "user-directory"]);
+const demoWorkspaceModes = new Set([
+  "not-applicable",
+  "task-temp",
+  "unresolved",
+  "user-directory",
+  "user-directory-nonempty",
+]);
 const cliStates = new Set(["authenticated", "missing", "not-used", "unauthenticated"]);
 const keyInventoryModes = new Set(["empty", "existing", "not-used"]);
 const keySaveModes = new Set(["error", "not-used", "success"]);
@@ -38,6 +46,7 @@ const targetProjects = new Set([
 ]);
 
 const requiredBehaviors = new Set([
+  "avoid-eva-sdk-routing",
   "bypass-demo-when-direct",
   "build-and-typecheck",
   "check-eva-whoami",
@@ -53,6 +62,7 @@ const requiredBehaviors = new Set([
   "map-sdk-to-target",
   "no-l3-claim",
   "pass-credential-path-to-documented-launcher",
+  "preflight-cli-availability-before-dependencies",
   "present-candidate-details",
   "present-demo-workspace-options",
   "present-official-cli-install",
@@ -63,6 +73,8 @@ const requiredBehaviors = new Set([
   "read-sdk-catalog",
   "report-cli-missing",
   "report-key-save-error",
+  "report-nonempty-demo-destination",
+  "report-snapshot-identity-change",
   "report-version-conflict",
   "report-selected-sdk",
   "request-cli-install-confirmation",
@@ -73,6 +85,7 @@ const requiredBehaviors = new Set([
   "return-operation-and-teardown",
   "resolve-latest-from-official-distribution",
   "resolve-latest-stable-example-tag",
+  "reuse-explicit-demo-authorization",
   "retry-eva-whoami-with-user-session-access",
   "require-whoami-recheck-after-login",
   "save-eva-key-to-dotenv",
@@ -107,14 +120,19 @@ const forbiddenBehaviors = new Set([
   "install-before-sdk-selection",
   "install-cli-before-confirmation",
   "invoke-cli-before-confirmation",
+  "invoke-eva-sdk-workflow",
   "modify-unrelated-file",
   "overwrite-nonempty-demo-workspace",
   "prebuild-before-build-capable-launcher",
   "read-dotenv-file",
+  "repeat-candidate-confirmation",
   "request-user-paste-ak",
   "run-eva-key-show",
   "require-demo-baseline",
   "restore-dependencies-before-confirmation",
+  "restore-dependencies-before-cli-preflight",
+  "reuse-demo-authorization-with-nonempty-directory",
+  "reuse-stale-demo-authorization",
   "silently-change-sdk-version",
   "stop-target-prematurely",
   "start-before-confirmation",
@@ -175,6 +193,8 @@ export function validateEvalSpec(spec) {
   let hasSuccessCanary = false;
   let hasErrorCanary = false;
   let hasConfirmedPubCredentialLaunch = false;
+  let hasExplicitRequestAuthorizationReuse = false;
+  let hasUnbrandedVoiceExclusion = false;
 
   for (const evalCase of spec.cases) {
     assertRecord(evalCase, "eval case");
@@ -259,6 +279,21 @@ export function validateEvalSpec(spec) {
     ) {
       hasConfirmedPubCredentialLaunch = true;
     }
+    if (
+      fixture.selection === "request-authorized"
+      && fixture.demoWorkspace === "user-directory"
+      && expected.route === "run-demo"
+      && expected.outcome === "complete-l2"
+    ) {
+      hasExplicitRequestAuthorizationReuse = true;
+    }
+    if (
+      expected.route === "not-applicable"
+      && expected.outcome === "not-applicable"
+      && /语音.*[Dd]emo|语音.*Demo/.test(evalCase.prompt)
+    ) {
+      hasUnbrandedVoiceExclusion = true;
+    }
 
     validateCaseSemantics(evalCase);
   }
@@ -268,12 +303,12 @@ export function validateEvalSpec(spec) {
   assertSetCovered(new Set(["empty", "existing"]), keyInventoryCoverage, "key inventory branch");
   assertSetCovered(new Set(["error", "success"]), keySaveCoverage, "key save branch");
   assertSetCovered(
-    new Set(["ambiguous", "confirmed", "unique-unconfirmed"]),
+    new Set(["ambiguous", "confirmed", "identity-changed", "request-authorized", "unique-unconfirmed"]),
     selectionCoverage,
     "selection branch",
   );
   assertSetCovered(
-    new Set(["task-temp", "unresolved", "user-directory"]),
+    new Set(["task-temp", "unresolved", "user-directory", "user-directory-nonempty"]),
     demoWorkspaceCoverage,
     "Demo workspace branch",
   );
@@ -297,13 +332,20 @@ export function validateEvalSpec(spec) {
     hasConfirmedPubCredentialLaunch,
     "evals must cover a confirmed Pub Demo launched through the authenticated credential path",
   );
+  assert(
+    hasExplicitRequestAuthorizationReuse,
+    "evals must cover reusing an explicit Demo id and absolute empty-directory authorization",
+  );
+  assert(hasUnbrandedVoiceExclusion, "evals must exclude an unbranded voice Demo request without EVA context");
 
   return { cases: spec.cases.length, skill: spec.skill };
 }
 
 function validateCaseSemantics(evalCase) {
   const { fixture, expected, id } = evalCase;
-  const awaitsConfirmation = ["ambiguous", "unique-unconfirmed"].includes(fixture.selection);
+  const awaitsCandidateConfirmation = ["ambiguous", "identity-changed", "unique-unconfirmed"].includes(
+    fixture.selection,
+  );
   const usesExamples = expected.route === "run-demo" || fixture.integrationSource === "example";
   if (usesExamples) {
     for (const behavior of [
@@ -319,10 +361,9 @@ function validateCaseSemantics(evalCase) {
       `${id}: examples workflow must forbid prerelease tags`,
     );
   }
-  if (awaitsConfirmation) {
+  if (awaitsCandidateConfirmation) {
     assert(expected.route === "run-demo", `${id}: selection confirmation only applies to run-demo`);
     assert(expected.outcome === "needs-confirmation", `${id}: unconfirmed selection must pause`);
-    assert(fixture.demoWorkspace === "unresolved", `${id}: unconfirmed Demo must not choose a final workspace`);
     assert(fixture.cliState === "not-used", `${id}: CLI must not run before confirmation`);
     assert(fixture.keyInventory === "not-used", `${id}: keys must not be listed before confirmation`);
     assert(fixture.keySave === "not-used", `${id}: key must not be saved before confirmation`);
@@ -330,23 +371,76 @@ function validateCaseSemantics(evalCase) {
       "present-candidate-details",
       "request-candidate-confirmation",
       "wait-for-confirmation",
-      "present-demo-workspace-options",
-      "request-demo-workspace-choice",
-      "wait-for-demo-workspace-choice",
     ]) {
       assert(expected.required.includes(behavior), `${id}: selection gate requires ${behavior}`);
     }
     for (const behavior of [
       "invoke-cli-before-confirmation",
-      "clone-final-before-workspace-choice",
       "restore-dependencies-before-confirmation",
       "start-before-confirmation",
     ]) {
       assert(expected.forbidden.includes(behavior), `${id}: selection gate must forbid ${behavior}`);
     }
+    if (["ambiguous", "unique-unconfirmed"].includes(fixture.selection)) {
+      assert(fixture.demoWorkspace === "unresolved", `${id}: unconfirmed Demo must not choose a final workspace`);
+    }
+    if (fixture.selection === "identity-changed") {
+      assert(
+        expected.required.includes("report-snapshot-identity-change"),
+        `${id}: changed identity must be reported before reconfirmation`,
+      );
+      assert(
+        expected.forbidden.includes("reuse-stale-demo-authorization"),
+        `${id}: changed identity must invalidate prior Demo authorization`,
+      );
+      for (const behavior of [
+        "request-demo-workspace-choice",
+        "wait-for-demo-workspace-choice",
+      ]) {
+        assert(
+          !expected.required.includes(behavior),
+          `${id}: unchanged workspace must not trigger ${behavior} after an identity change`,
+        );
+      }
+    }
+  }
+  if (expected.route === "run-demo" && fixture.demoWorkspace === "unresolved") {
+    assert(expected.outcome === "needs-confirmation", `${id}: missing Demo workspace must pause`);
+    for (const behavior of [
+      "present-demo-workspace-options",
+      "request-demo-workspace-choice",
+      "wait-for-demo-workspace-choice",
+    ]) {
+      assert(expected.required.includes(behavior), `${id}: unresolved Demo workspace requires ${behavior}`);
+    }
+    assert(
+      expected.forbidden.includes("clone-final-before-workspace-choice"),
+      `${id}: unresolved Demo workspace must not receive the final clone`,
+    );
+  }
+  if (fixture.demoWorkspace === "user-directory-nonempty") {
+    assert(expected.route === "run-demo", `${id}: non-empty Demo workspace only applies to run-demo`);
+    assert(expected.outcome === "needs-confirmation", `${id}: non-empty Demo workspace must pause`);
+    assert(fixture.cliState === "not-used", `${id}: CLI must not run for a non-empty Demo workspace`);
+    for (const behavior of [
+      "report-nonempty-demo-destination",
+      "request-demo-workspace-choice",
+      "wait-for-demo-workspace-choice",
+    ]) {
+      assert(expected.required.includes(behavior), `${id}: non-empty Demo workspace requires ${behavior}`);
+    }
+    for (const behavior of [
+      "overwrite-nonempty-demo-workspace",
+      "reuse-demo-authorization-with-nonempty-directory",
+    ]) {
+      assert(expected.forbidden.includes(behavior), `${id}: non-empty Demo workspace must forbid ${behavior}`);
+    }
   }
   if (expected.route === "run-demo" && fixture.cliState !== "not-used") {
-    assert(fixture.selection === "confirmed", `${id}: CLI branch requires confirmed selection`);
+    assert(
+      ["confirmed", "request-authorized"].includes(fixture.selection),
+      `${id}: CLI branch requires confirmed or reusable request authorization`,
+    );
   }
   if (fixture.cliState === "not-used") {
     assert(fixture.keyInventory === "not-used", `${id}: keys cannot be listed without EVA CLI`);
@@ -365,10 +459,10 @@ function validateCaseSemantics(evalCase) {
   if (expected.route === "run-demo") {
     assert(fixture.sdkCatalog === "not-used", `${id}: run-demo must not route through SDK catalog`);
     assert(fixture.integrationSource === "not-applicable", `${id}: run-demo integration source must be not-applicable`);
-    if (fixture.selection === "confirmed") {
+    if (["confirmed", "request-authorized"].includes(fixture.selection) && fixture.cliState !== "not-used") {
       assert(
         ["task-temp", "user-directory"].includes(fixture.demoWorkspace),
-        `${id}: confirmed Demo requires a resolved final workspace`,
+        `${id}: authorized Demo execution requires a resolved final workspace`,
       );
     }
     if (fixture.selection === "unavailable") {
@@ -377,6 +471,14 @@ function validateCaseSemantics(evalCase) {
   } else {
     assert(fixture.demoWorkspace === "not-applicable", `${id}: non-demo workflow has no Demo workspace`);
   }
+  if (expected.route === "not-applicable") {
+    assert(expected.outcome === "not-applicable", `${id}: excluded request must be not-applicable`);
+    assert(expected.required.includes("avoid-eva-sdk-routing"), `${id}: excluded request must avoid EVA SDK routing`);
+    assert(
+      expected.forbidden.includes("invoke-eva-sdk-workflow"),
+      `${id}: excluded request must not invoke the EVA SDK workflow`,
+    );
+  }
   if (expected.route !== "run-demo" && fixture.integrationSource !== "example") {
     assert(fixture.selection === "not-applicable", `${id}: non-demo workflow selection must be not-applicable`);
   }
@@ -384,6 +486,10 @@ function validateCaseSemantics(evalCase) {
     assert(expected.outcome === "needs-confirmation", `${id}: missing CLI must wait for global-install confirmation`);
     assert(expected.required.includes("check-eva-whoami"), `${id}: missing CLI must be detected with eva whoami`);
     assert(expected.required.includes("report-cli-missing"), `${id}: missing CLI report is required`);
+    assert(
+      expected.required.includes("preflight-cli-availability-before-dependencies"),
+      `${id}: missing CLI must be detected before dependency restore`,
+    );
     for (const behavior of [
       "present-official-cli-install",
       "request-cli-install-confirmation",
@@ -394,6 +500,10 @@ function validateCaseSemantics(evalCase) {
     assert(
       expected.forbidden.includes("install-cli-before-confirmation"),
       `${id}: global CLI install before confirmation must be forbidden`,
+    );
+    assert(
+      expected.forbidden.includes("restore-dependencies-before-cli-preflight"),
+      `${id}: dependency restore must wait for CLI availability preflight`,
     );
   }
   if (fixture.cliState === "unauthenticated") {
@@ -440,6 +550,39 @@ function validateCaseSemantics(evalCase) {
       `${id}: non-empty user-selected workspace must not be overwritten`,
     );
   }
+  if (
+    fixture.selection === "request-authorized"
+    && fixture.demoWorkspace === "user-directory"
+    && fixture.cliState !== "not-used"
+  ) {
+    assert(
+      expected.required.includes("reuse-explicit-demo-authorization"),
+      `${id}: exact request authorization must be reused`,
+    );
+    assert(
+      expected.forbidden.includes("repeat-candidate-confirmation"),
+      `${id}: exact request authorization must not trigger repeated confirmation`,
+    );
+    for (const behavior of [
+      "request-candidate-confirmation",
+      "wait-for-confirmation",
+      "request-demo-workspace-choice",
+      "wait-for-demo-workspace-choice",
+    ]) {
+      assert(
+        !expected.required.includes(behavior),
+        `${id}: reusable Demo authorization must not also require ${behavior}`,
+      );
+    }
+  }
+  if (fixture.selection === "request-authorized") {
+    for (const behavior of ["request-candidate-confirmation", "wait-for-confirmation"]) {
+      assert(
+        !expected.required.includes(behavior),
+        `${id}: exact Demo id must not trigger ${behavior}`,
+      );
+    }
+  }
   if (fixture.keyInventory === "empty") {
     assert(expected.required.includes("create-eva-key-with-no-show"), `${id}: missing-key branch must create safely`);
     assert(
@@ -470,7 +613,7 @@ function validateCaseSemantics(evalCase) {
   }
   if (
     fixture.catalog === "single-pub-demo"
-    && fixture.selection === "confirmed"
+    && ["confirmed", "request-authorized"].includes(fixture.selection)
     && fixture.keySave === "success"
   ) {
     for (const behavior of [

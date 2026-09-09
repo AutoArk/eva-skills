@@ -107,7 +107,43 @@ export function validateCliProtocol(documents) {
   );
   assert(documents.runDemo.includes("任务专属临时目录"), "run-demo must offer a task temp directory");
   assert(documents.runDemo.includes("用户给出的明确目标目录"), "run-demo must offer a user-selected directory");
-  assert(documents.runDemo.includes("不得覆盖非空目录"), "run-demo must protect non-empty destinations");
+  assert(documents.runDemo.includes("不得覆盖非空自定义目录"), "run-demo must protect non-empty destinations");
+  assert(
+    documents.runDemo.includes("本任务创建、commit 一致且没有未知新增或修改内容")
+      && documents.runDemo.includes("该受控快照即使非空也可复用")
+      && documents.runDemo.includes("提出新的任务专属目录")
+      && documents.runDemo.includes("不读取、不清理、不覆盖旧目录")
+      && documents.runDemo.includes("不接受一句确认把它当成可信快照"),
+    "run-demo must reuse only the verified task snapshot and protect unknown contents",
+  );
+  assert(
+    documents.runDemo.includes("“Demo 依赖解析”")
+      && !documents.runDemo.includes("“最新稳定 Demo 基线”"),
+    "run-demo must route to the current Demo dependency-resolution section",
+  );
+  assert(
+    documents.skill.includes("id + ref/commit + 绝对最终目录")
+      && documents.skill.includes("直接继续，不再次请求候选或目录确认"),
+    "SKILL.md must reuse an exact Demo authorization bound to the immutable snapshot and destination",
+  );
+  assert(
+    documents.skill.includes("授权 gate 前只读取 catalog、README 候选简介、manifest/lock 中可确定的版本身份和目录状态")
+      && documents.runDemo.includes("gate 前不读取完整执行文档、原生依赖或平台配置"),
+    "Demo gate must limit pre-authorization reads to candidate identity and destination state",
+  );
+  assert(
+    documents.skill.includes("远端 branch 后续移动不改变该身份")
+      && documents.skill.includes("最终自定义目录必须重现冻结 commit，不重新追随 branch tip")
+      && documents.runDemo.includes("tag 被移动")
+      && documents.runDemo.includes("最终自定义目录 checkout 冻结 SHA"),
+    "Demo snapshots must keep the frozen commit across branch movement and fail closed on moved tags",
+  );
+  assert(
+    documents.skill.includes("全局安装 CLI 仍需要独立确认")
+      && documents.skill.includes("浏览器中的登录必须由用户亲自完成")
+      && documents.skill.includes("绝不读取、显示、复制、解析、搜索、转录、加载或编码 `.env` 内容"),
+    "Demo authorization reuse must preserve CLI install, human login, and opaque .env boundaries",
+  );
   assert(documents.cli.includes("保存 `.env` 不等于流程完成"), "CLI protocol must bind saved .env to its consumer");
   assert(documents.cli.includes("禁止 agent 读取"), "CLI protocol must explicitly forbid agent reads of .env");
   assert(documents.cli.includes("LLM 上下文"), "CLI protocol must explain the context-leak boundary");
@@ -150,13 +186,17 @@ export function validateCliProtocol(documents) {
     "run-demo must count a build-capable credential launcher as the single build",
   );
 
+  const demoCliAvailability = documents.runDemo.indexOf("先完整读取并执行 [cli.md](cli.md) 的“CLI 可用性与登录”小节");
+  const demoDependencies = documents.runDemo.indexOf("使用该生态的 frozen/locked/reproducible 模式恢复依赖");
   const demoPreflight = documents.runDemo.indexOf("先运行当前生态适用的测试、静态检查");
-  const demoCli = documents.runDemo.indexOf("完整读取并执行 [cli.md](cli.md)", demoPreflight + 1);
-  const demoBind = documents.runDemo.indexOf("同一个不透明路径值", demoCli + 1);
+  const demoKeyLifecycle = documents.runDemo.indexOf("再执行 [cli.md](cli.md) 的“在项目目录保存 `.env`”小节");
+  const demoBind = documents.runDemo.indexOf("同一个不透明路径值", demoKeyLifecycle + 1);
   const demoStart = documents.runDemo.indexOf("按 example 的凭证路径启动入口启动目标", demoBind + 1);
-  assert(demoPreflight >= 0, "run-demo must complete pre-credential checks before retrieving the credential path");
-  assert(demoCli > demoPreflight, "run-demo must retrieve the credential path after pre-credential checks");
-  assert(demoBind > demoCli, "run-demo must bind the credential path immediately after CLI retrieval");
+  assert(demoCliAvailability >= 0, "run-demo must preflight CLI availability after the Demo gate");
+  assert(demoDependencies > demoCliAvailability, "run-demo must preflight CLI availability before dependency restore");
+  assert(demoPreflight > demoDependencies, "run-demo must run dependency restore before build and static checks");
+  assert(demoKeyLifecycle > demoPreflight, "run-demo must defer the key lifecycle until pre-start checks pass");
+  assert(demoBind > demoKeyLifecycle, "run-demo must bind the credential path immediately after key retrieval");
   assert(demoStart > demoBind, "run-demo must pass the bound credential path into startup");
 
   const firstWhoami = documents.cli.indexOf("`eva whoami`");

@@ -50,7 +50,7 @@ CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 ### 能力边界
 
 - 直接从已发布 SDK 接入现有应用，不要求先运行 Demo。
-- 根据用户提供的 SDK、语言和平台条件定位候选 Demo，并在用户确认候选及工作目录后执行。
+- 根据用户提供的 SDK、语言和平台条件定位候选 Demo。请求已明确 example id 与绝对空目录且匹配同一 immutable snapshot 时直接复用该授权；缺少目录、存在歧义、冻结 commit 或本地 snapshot 身份变化、目录非空时再确认。远端 branch 后续移动不改变已冻结的本地 snapshot。
 - 通过 EVA CLI 完成登录状态检查、key 选择或安全创建，并在项目目录保存 `.env`；agent 禁止读取该文件，只把绝对路径传给启动参数。
 - 根据目标发布物、example 和平台选择依赖恢复、构建、运行与验证方式，不把 TypeScript 工具链泛化为所有 SDK 的固定流程。
 
@@ -67,7 +67,7 @@ SDK catalog 不保存版本号。依赖选择由各 source/distribution 的 `res
 ### 设计说明
 
 - `sdk-catalog.json` 描述当前可直接接入的公开 SDK，并在每个 distribution 上维护依赖 `resolution`；`reference-sources.json` 维护外部参考来源、examples 的依赖 `resolution` 和模型能力目录。默认发布模式解析最新稳定 SemVer tag，并固定该任务使用的 ref 和 commit。
-- Demo 请求无论只命中一个还是多个候选，都先展示描述和路径，让用户确认候选及最终目录。
+- Demo 请求先解析并展示候选、immutable ref/commit 与最终目录。用户已明确 example id 和绝对空目录且三者一致时不重复确认；CLI 可用性在授权后、依赖与构建前预检，全局安装仍单独确认。受控任务暂存快照可以复用；出现未知内容时保留旧目录并选择新目录重现冻结 commit。
 - `references/cli.md` 是 EVA CLI 精确命令和顺序的唯一权威来源，其他运行时文档只负责链接和路由。
 
 </details>

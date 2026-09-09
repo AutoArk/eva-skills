@@ -94,13 +94,22 @@ test("forbids eva key show from exposing AK plaintext", () => {
   assert.throws(() => validateCliProtocol(documents), /must forbid eva key show/);
 });
 
-test("retrieves and binds the credential path only after pre-credential checks", () => {
+test("preflights CLI availability before dependency restore", () => {
+  const documents = cloneDocuments();
+  documents.runDemo = documents.runDemo
+    .replace("先完整读取并执行 [cli.md](cli.md) 的“CLI 可用性与登录”小节", "__CLI_AVAILABILITY__")
+    .replace("使用该生态的 frozen/locked/reproducible 模式恢复依赖", "先完整读取并执行 [cli.md](cli.md) 的“CLI 可用性与登录”小节")
+    .replace("__CLI_AVAILABILITY__", "使用该生态的 frozen/locked/reproducible 模式恢复依赖");
+  assert.throws(() => validateCliProtocol(documents), /preflight CLI availability before dependency restore/);
+});
+
+test("defers key lifecycle until pre-start checks pass", () => {
   const documents = cloneDocuments();
   documents.runDemo = documents.runDemo
     .replace("先运行当前生态适用的测试、静态检查", "__PREFLIGHT_STEP__")
-    .replace("完整读取并执行 [cli.md](cli.md)", "先运行当前生态适用的测试、静态检查")
-    .replace("__PREFLIGHT_STEP__", "完整读取并执行 [cli.md](cli.md)");
-  assert.throws(() => validateCliProtocol(documents), /retrieve the credential path after pre-credential checks/);
+    .replace("再执行 [cli.md](cli.md) 的“在项目目录保存 `.env`”小节", "先运行当前生态适用的测试、静态检查")
+    .replace("__PREFLIGHT_STEP__", "再执行 [cli.md](cli.md) 的“在项目目录保存 `.env`”小节");
+  assert.throws(() => validateCliProtocol(documents), /defer the key lifecycle until pre-start checks pass/);
 });
 
 test("forbids a separate prebuild when the credential launcher already builds", () => {

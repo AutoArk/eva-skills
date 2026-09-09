@@ -1,6 +1,6 @@
 ---
 name: eva-sdk
-description: 启动官方 EVA Demo，或不运行 Demo、直接选择已发布的 EVA SDK 接入和定制现有应用。用户要求查看当前 SDK、查询官方公网入口、运行 EVA Demo、接入 SDK、修改公开能力，或验证和排查 SDK 消费方项目时使用；未指定其他产品或框架的“启动语音对话 Demo”请求也适用，明确指向其他产品或框架时不适用。用本地 SDK catalog 路由已发布 SDK，用各 source/distribution 的 resolution 选择依赖模式，不预设具体工具链。
+description: 基于已发布 EVA SDK 公共 API 进行选型、接入、配置、消费方验证排障或运行官方 Demo。泛称语音 Demo 仅在已有 EVA 上下文时适用；不用于 SDK 实现源码修改、公共契约设计或其他产品的 Demo。
 license: MIT
 ---
 
@@ -43,7 +43,7 @@ license: MIT
 - `sdk-catalog.json`：随 skill release 维护的已发布 SDK 目录，记录 SDK family、语言、平台、描述、官方分发身份、公网页面和公开文档；不记录版本号，也不从 examples 反推 SDK 列表。
 - `reference-sources.json` 中 `purpose: examples-catalog` 的来源声明官方 examples 仓库、依赖策略和 catalog 路径；`purpose: model-catalog` 的来源提供 Gateway 模型能力参考。Examples catalog 只决定当前可运行的 Demo，不决定全部可接入 SDK。
 
-用户问当前有哪些 SDK、直接接入、修改已有 SDK 项目或询问公共 API 时，从 SDK catalog 出发。用户明确要运行 Demo、以 Demo 为接入基线或需要先证明环境时，才读取 examples catalog。
+用户问当前有哪些 SDK、直接接入、修改已有 SDK 消费方应用或询问公共 API 时，从 SDK catalog 出发。用户明确要运行 Demo、以 Demo 为接入基线或需要先证明环境时，才读取 examples catalog。
 
 ## Demo 依赖解析
 
@@ -51,8 +51,9 @@ license: MIT
 2. 按配置解析 examples：`latest-tag` 选择最高稳定 `X.Y.Z` tag；`tag` 使用 `value` 指定的 tag；`branch` 使用 `value` 指定的分支。不存在或无法解析时 fail closed。
 3. 把选中的 ref 克隆到任务专属暂存目录，解析并记录 checkout 后的完整 commit。该 ref、commit 组成当前任务快照；后续所有候选读取、确认、落盘、构建和启动都必须使用同一快照。
 4. 读取该快照的 catalog。它是当前任务可运行 Demo 的唯一目录；不要把它当作全部已发布 SDK 的目录。
-5. 只选择 catalog 中存在的记录，再读取该 example 自带的执行文档、依赖声明、可复现解析文件和平台配置。由这些材料提取环境要求、依赖恢复、静态检查、构建、启动、可观测信号与停止方式；不要在 skill 中预设命令。
-6. 请求没有匹配项时列出 catalog 的实际候选并停止，不从其他 SDK family、语言或平台推导实现。
+5. 只选择 catalog 中存在的记录。授权 gate 前只读取 catalog、README 候选简介、manifest/lock 中可确定的版本身份和目录状态；gate 满足后才读取所选 example 的完整执行文档、原生依赖、平台配置和公共 SDK 用法，由这些材料提取环境要求、依赖恢复、静态检查、构建、启动、可观测信号与停止方式。不要在 skill 中预设命令。
+6. commit 一旦解析并展示，就作为当前任务的冻结 snapshot 身份。远端 branch 后续移动不改变该身份，也不自动使已有授权失效；最终自定义目录必须重现冻结 commit，不重新追随 branch tip。tag 被移动、冻结 commit 无法取得，或本地 snapshot HEAD/内容身份实际变化时 fail closed。
+7. 请求没有匹配项时列出 catalog 的实际候选并停止，不从其他 SDK family、语言或平台推导实现。
 
 ## 直接 SDK 路由与版本
 
@@ -65,15 +66,16 @@ license: MIT
 
 ## Demo 选择确认
 
-对 `run-demo` 强制设置用户确认 gate。解析配置指定的 ref、把对应快照拉到任务暂存目录、记录 commit、筛选 catalog 和读取候选说明属于确认前允许的只读动作；最终落盘、任何 EVA CLI 命令、CLI 安装、恢复依赖、构建和启动都必须发生在候选与目录确认后。全局安装 CLI 还需要独立确认。
+对 `run-demo` 设置候选、immutable snapshot 与最终目录组成的授权 gate。解析配置指定的 ref、把对应快照拉到任务暂存目录、记录 commit、筛选 catalog、读取候选说明和检查目标目录是否为空属于 gate 前允许的只读动作；最终落盘、任何 EVA CLI 命令、恢复依赖、构建和启动只能在该授权 gate 满足后发生。全局安装 CLI 仍需要独立确认，Demo gate 不提供安装授权。
 
 - 用户请求模糊、只给出部分条件或命中多个候选时，展示所有匹配候选并请用户选择。
-- 用户条件明确且只命中一个候选时，也先展示该候选并请用户确认；catalog 当前只有一个记录不等于用户已经选择。
+- 用户在请求中同时给出精确 example `id` 和明确的绝对最终目录时，解析 immutable ref/commit，并确认该 `id` 存在于该快照且目标目录不存在或为空。三项一致时，把该请求视为对 `id + ref/commit + 绝对最终目录` 的明确授权；展示解析结果后直接继续，不再次请求候选或目录确认。
+- 只靠语言、平台、SDK family 等条件唯一命中一个候选时，仍展示该候选并请用户确认；catalog 当前只有一个记录不等于用户已经选择。
 - 每个候选至少展示 `id`、来自 README 的一句话描述、SDK family、语言、平台、catalog 路径、状态，以及 manifest/解析文件能够确定的 SDK 版本。描述必须来自已解析快照，不自行编写产品能力。
-- 展示候选时同时询问 examples 快照最终拉到哪里：用户给出的明确目标目录，或任务专属临时目录。未给出位置选择时不要继续；用户目标目录已存在且非空时停止并请求新目录或明确处置方式，不覆盖现有内容。
-- 只有用户在看到候选后明确回复候选编号、`id` 或确认语句，才把该候选视为已确认。初始请求中的“启动一个”“直接启动”或精确条件不能替代候选展示后的确认。
-- 用户选择任务临时目录时继续使用已验证的暂存快照；选择自定义目录时从同一官方 repository 把相同 tag 拉到该目录并再次核对 commit。所选 Demo 工作目录是最终快照根下的 catalog path，不是快照根本身。
-- 用户已经确认过同一 tag/commit 下的同一候选时不要重复询问；tag、commit 或候选变化时重新确认。
+- 未给出绝对最终目录时，展示任务专属临时目录与用户自定义绝对目录两个选项并等待选择。自定义目标目录已存在且非空时停止并请求新目录或明确处置方式，不覆盖现有内容；初始请求中的目录授权不能授权处置后来发现的非空内容。
+- 候选或目录未在初始请求中完整授权时，只有用户在看到解析结果后明确回复候选编号、`id`、目录或确认语句，才补齐对应授权。“启动一个”“直接启动”和唯一候选不能代替缺失的选择。
+- 用户选择任务临时目录时，可以继续使用本任务创建且 commit 一致、没有未知新增或修改内容的已验证暂存快照；该受控快照不按普通非空目录处理。发现未知内容时，不读取、不清理、不覆盖旧目录，也不能靠一句确认把它恢复为可信快照；提出新的任务专属目录，等待用户选择后在新目录重现同一冻结 commit。选择自定义目录时从同一 official repository 取得并 checkout 冻结 commit，不再次追随 branch。所选 Demo 工作目录是最终快照根下的 catalog path，不是快照根本身。
+- 授权只对已展示或已复用的 `id + ref/commit + 绝对最终目录` 有效。`id`、冻结 commit、最终目录或本地 snapshot 身份变化，自定义目录在最终写入前变为非空，或者任务暂存快照出现未知内容时，停止并补齐新的目录或身份授权；远端 branch 移动但冻结 snapshot 未变时继续使用原授权。tag 被移动时始终 fail closed。三项未变化时不要重复询问。
 - 等待候选或目录确认时结束当前执行，不写最终落盘目录、不调用凭证工具、不安装、不构建、不启动，也不以“节省一步”为由选择默认项。
 
 ## 选择工作流
@@ -82,7 +84,7 @@ license: MIT
 - 需要安装/登录 EVA CLI，或在本地项目目录选择/创建 key 并保存 `.env`：完整读取 [references/cli.md](references/cli.md) 并执行。
 - 接入现有应用：完整读取 [references/integrate.md](references/integrate.md) 并执行；默认走直接 SDK 路径，只有用户明确选择 Demo 基线时才依赖 example。
 - 修改公开配置、控制、观察面、UI 或正式扩展点：完整读取 [references/customize.md](references/customize.md) 并执行。
-- 涉及模型或模型参数（包括采样率、音色、语言、温度、格式、延迟等）：完整读取 [references/model-parameters.md](references/model-parameters.md)，并按需读取 `purpose: model-catalog` 的外部来源。必须根据当前 SDK 的公开能力和限制判断调用组合是否可行，不要求 SDK 逐一列出模型，也不得只替换模型名而跳过配套参数核对。
+- 纯模型或参数问答（包括采样率、音色、语言、温度、格式、延迟等）：读取 [references/model-parameters.md](references/model-parameters.md) 的“参数问答与可行性”小节及对应公开来源。需要写入配置、切换模型或验证参数组合时完整读取该 reference。必须根据当前 SDK 的公开能力和限制判断调用组合是否可行，不要求 SDK 逐一列出模型，也不得只替换模型名而跳过配套参数核对。
 - 简单 API 问答：从 SDK catalog 定位官方发布物并读取公共材料，不强制读取或启动 Demo。
 - 同一请求跨多个工作流时，只读取涉及的 references，并按 `run-demo -> integrate -> customize` 的依赖顺序执行；已有可验证基线时可跳过 `run-demo`。
 

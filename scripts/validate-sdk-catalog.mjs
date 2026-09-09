@@ -137,7 +137,8 @@ export function queryLiveSdkMetadata(sdk) {
     ["view", sdk.distribution.package, "name", "dist-tags", "--json"],
     { encoding: "utf8" },
   );
-  return JSON.parse(output);
+  const parsed = JSON.parse(output);
+  return Array.isArray(parsed) ? parsed[0] : parsed;
 }
 
 function validateDistribution(sdk) {

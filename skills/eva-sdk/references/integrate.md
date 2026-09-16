@@ -17,13 +17,14 @@
 3. 检查目标项目是否已安装该 SDK：
    - 已安装：保留当前解析版本，从该版本的发布物读取公共契约；不自动升级。
    - 读取所选 SDK distribution 的 `resolution`：`latest-version` 查询 `defaultChannel`，取得精确版本；`version` 使用其 `value`，先验证官方 distribution 存在该版本，再安装并锁定。
+   - Registry distribution 使用项目原生依赖管理器并保留 lock；`github-release` 只选择 catalog 声明的官方 repository 和目标平台资产，下载归档及 `.sha256`，验证摘要后解压。读取随包 `manifest.json` 核对版本、平台与 ABI，通过包内 CMake config 使用 `find_package(... EXACT CONFIG REQUIRED)`；不要使用 latest URL、Source code 归档或本地 SDK 源码替代发布物。
 4. 先完整阅读所选发布物的 package README、project description、导出声明/类型和目标配置项的 JSDoc/源码注释，再结合 catalog 官方文档建立职责映射。涉及模型参数时同时执行 [model-parameters.md](model-parameters.md)：根据 SDK 当前公开能力和限制判断调用组合，再按模型列表重新核对配套参数；不要要求 SDK 明确列出每个模型。至少覆盖 SDK 创建与公开配置、生命周期与资源释放、输入输出与观察面、平台权限/资产/宿主集成，以及凭证边界。
 5. 先使用当前生态的编译器、静态检查、schema、lint 或配置 validator，再做最小代码与配置修改。不要替换应用脚手架、修改无关文件或从 SDK internal 补实现。
 6. 按目标项目原有工具链执行由便宜到昂贵的验证，并报告 SDK 公网来源、请求 channel/版本、最终解析的精确版本与实际完成层级。
 
 ## Demo 基线路径
 
-1. 执行 `SKILL.md` 的“最新稳定 Demo 基线”和“Demo 选择确认”。未确认 example 前不调用 CLI、不恢复依赖、不构建、不启动。
+1. 执行 `SKILL.md` 的“Demo 依赖解析”和“Demo 选择确认”。未确认 example 前不调用 CLI、不恢复依赖、不构建、不启动。
 2. 用户确认后读取 example 的执行文档、依赖解析、公共 SDK 用法和平台配置，建立 example-to-target 职责映射，而不是文件复制。
 3. 目标项目未安装 SDK 时，采用已解析 example 快照中的精确版本；目标项目已安装不同版本时，报告公共契约与解析差异并请用户选择，不能静默升级或降级。
 4. 保留目标项目原有语言生态、框架、依赖管理、目录结构和无关行为；不要整包复制 demo、移植 example 的解析文件或替换脚手架。

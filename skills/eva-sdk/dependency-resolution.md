@@ -40,6 +40,10 @@
 }
 ```
 
+Registry distribution 把解析出的精确版本写入目标项目的 manifest/lock。`github-release` distribution 从官方 repository 的稳定 Release 解析无 `v` 的精确 SemVer tag，再把 catalog 中的 `{version}` 和 `{platform}` 展开为资产名；必须同时取得归档和对应 `.sha256`，校验通过后才能解压。记录 repository、tag、平台、资产名和 SHA-256，不使用 `/latest/download/` 或 GitHub 自动生成的 Source code 归档。
+
+直接接入 C++ SDK 时使用包内公开的 CMake config，并以 Release 版本做 EXACT 匹配。运行 example 时沿用 example 已声明的精确版本和自带准备入口，不在 skill 中另行选择另一个 Release。
+
 ## 发布前
 
 正式发布前必须恢复：
@@ -49,4 +53,4 @@ examples.resolution.mode = latest-tag
 sdk distribution.resolution.mode = latest-version
 ```
 
-发布校验不接受 `tag`、`branch` 或 `version` 作为发布配置。测试 branch 不需要把 commit 写回 catalog；commit 只作为本次运行证据记录。
+发布校验不接受 `tag`、`branch` 或 `version` 作为发布配置。测试 branch 不需要把 commit 写回 catalog；commit 只作为本次运行证据记录。当前未发布 examples 使用 `branch: main`，因此完整发布校验应失败；上线前恢复 `latest-tag` 后再执行发布验收。

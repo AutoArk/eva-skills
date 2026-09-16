@@ -5,7 +5,7 @@ import { loadEvalSpec, validateEvalSpec } from "./validate-evals.mjs";
 
 test("accepts the repository eval catalog and its required coverage", () => {
   const result = validateEvalSpec(loadEvalSpec());
-  assert.deepEqual(result, { cases: 21, skill: "eva-sdk" });
+  assert.deepEqual(result, { cases: 23, skill: "eva-sdk" });
 });
 
 test("requires the exact Demo request to carry the reusable authorization behavior", () => {
@@ -175,13 +175,13 @@ test("forbids eva key show on every credential path", () => {
   assert.throws(() => validateEvalSpec(spec), /missing core AK prohibition run-eva-key-show/);
 });
 
-test("examples workflow resolves the latest stable tag and pins its commit", () => {
+test("examples workflow resolves the configured branch and pins its commit", () => {
   const spec = cloneSpec();
   const success = spec.cases.find((evalCase) => evalCase.id === "run-demo-success-after-confirmation");
   success.expected.required = success.expected.required.filter(
-    (behavior) => behavior !== "resolve-latest-stable-example-tag",
+    (behavior) => behavior !== "resolve-configured-example-branch",
   );
-  assert.throws(() => validateEvalSpec(spec), /examples workflow requires resolve-latest-stable-example-tag/);
+  assert.throws(() => validateEvalSpec(spec), /examples workflow requires resolve-configured-example-branch/);
 });
 
 test("forbids CLI, dependency restore, and startup before candidate confirmation", () => {

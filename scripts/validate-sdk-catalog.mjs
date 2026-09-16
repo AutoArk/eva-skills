@@ -7,7 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultCatalogPath = resolve(repositoryRoot, "skills/eva-sdk/sdk-catalog.json");
-const allowedPublicHosts = new Set(["www.npmjs.com", "pub.dev", "pypi.org"]);
+const allowedPublicHosts = new Set(["www.npmjs.com", "pub.dev", "pypi.org", "github.com"]);
+const officialCppRepository = "AutoArk/eva-cpp-sdk-release";
 const exactVersionPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 
 export function loadSdkCatalog(path = defaultCatalogPath) {
@@ -116,6 +117,29 @@ export function validatePubRegistryMetadata(sdk, metadata) {
   return resolved;
 }
 
+export function validateGitHubReleaseMetadata(sdk, metadata) {
+  assert(sdk.distribution.ecosystem === "github-release", `${sdk.id}: SDK is not GitHub Release-distributed`);
+  assertRecord(metadata, `${sdk.id} release metadata`);
+  assert(metadata.draft === false, `${sdk.id}: latest release must not be a draft`);
+  assert(metadata.prerelease === false, `${sdk.id}: latest release must be stable`);
+  const resolved = metadata.tag_name;
+  assertNonEmptyString(resolved, `${sdk.id}: latest release tag must resolve`);
+  assert(exactVersionPattern.test(resolved), `${sdk.id}: latest release tag must be an exact version without v`);
+  assert(Array.isArray(metadata.assets), `${sdk.id}: release assets must be an array`);
+  const assetNames = new Set(metadata.assets.map((asset) => asset?.name));
+  for (const platform of sdk.platforms) {
+    const archive = sdk.distribution.assetPattern
+      .replace("{version}", resolved)
+      .replace("{platform}", platform);
+    assert(assetNames.has(archive), `${sdk.id}: release asset missing: ${archive}`);
+    assert(
+      assetNames.has(`${archive}${sdk.distribution.checksumSuffix}`),
+      `${sdk.id}: release checksum missing: ${archive}${sdk.distribution.checksumSuffix}`,
+    );
+  }
+  return resolved;
+}
+
 export function queryLiveSdkMetadata(sdk) {
   if (sdk.distribution.ecosystem === "pypi") {
     const output = execFileSync("curl", ["-fsSL", `https://pypi.org/pypi/${sdk.distribution.package}/json`], { encoding: "utf8" });
@@ -125,6 +149,19 @@ export function queryLiveSdkMetadata(sdk) {
     const output = execFileSync(
       "curl",
       ["-fsSL", `https://pub.dev/api/packages/${sdk.distribution.package}`],
+      { encoding: "utf8" },
+    );
+    return JSON.parse(output);
+  }
+  if (sdk.distribution.ecosystem === "github-release") {
+    const output = execFileSync(
+      "curl",
+      [
+        "-fsSL",
+        "-H",
+        "Accept: application/vnd.github+json",
+        `https://api.github.com/repos/${sdk.distribution.repository}/releases/latest`,
+      ],
       { encoding: "utf8" },
     );
     return JSON.parse(output);
@@ -144,24 +181,46 @@ export function queryLiveSdkMetadata(sdk) {
 function validateDistribution(sdk) {
   const distribution = sdk.distribution;
   assertRecord(distribution, `${sdk.id}.distribution`);
-  assertExactKeys(
-    distribution,
-    ["ecosystem", "package", "resolution", "defaultChannel", "publicUrl"],
-    `${sdk.id}.distribution`,
-  );
-  if (!["npm", "pub", "pypi"].includes(distribution.ecosystem)) {
+  const distributionFields = distribution.ecosystem === "github-release"
+    ? [
+        "ecosystem",
+        "package",
+        "repository",
+        "resolution",
+        "defaultChannel",
+        "publicUrl",
+        "assetPattern",
+        "checksumSuffix",
+      ]
+    : ["ecosystem", "package", "resolution", "defaultChannel", "publicUrl"];
+  assertExactKeys(distribution, distributionFields, `${sdk.id}.distribution`);
+  if (!["npm", "pub", "pypi", "github-release"].includes(distribution.ecosystem)) {
     throw new Error(`${sdk.id}: unsupported distribution ecosystem ${distribution.ecosystem}`);
   }
   const packagePatterns = {
     npm: /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/,
     pub: /^[a-z][a-z0-9_]*$/,
     pypi: /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
+    "github-release": /^[A-Za-z][A-Za-z0-9]*$/,
   };
   const packagePattern = packagePatterns[distribution.ecosystem];
   assert(packagePattern.test(distribution.package), `${sdk.id}: invalid ${distribution.ecosystem} package`);
   assert(distribution.defaultChannel === "latest", `${sdk.id}: default channel must be latest`);
   validateResolution(distribution.resolution, `${sdk.id}.distribution.resolution`);
   validatePublicUrl(distribution.publicUrl, `${sdk.id}.distribution.publicUrl`);
+  if (distribution.ecosystem === "github-release") {
+    assert(distribution.repository === officialCppRepository, `${sdk.id}: GitHub repository must be ${officialCppRepository}`);
+    assert(
+      distribution.publicUrl === `https://github.com/${officialCppRepository}/releases`,
+      `${sdk.id}: GitHub Release public URL must match the official repository`,
+    );
+    assert(
+      distribution.assetPattern === "eva-cpp-sdk-{version}-{platform}.tar.gz",
+      `${sdk.id}: unsupported GitHub Release asset pattern`,
+    );
+    assert(distribution.checksumSuffix === ".sha256", `${sdk.id}: checksum suffix must be .sha256`);
+    return;
+  }
   const expectedUrls = {
     npm: `https://www.npmjs.com/package/${distribution.package}`,
     pub: `https://pub.dev/packages/${distribution.package}`,
@@ -254,6 +313,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
           npm: validateNpmRegistryMetadata,
           pub: validatePubRegistryMetadata,
           pypi: validatePyPiRegistryMetadata,
+          "github-release": validateGitHubReleaseMetadata,
         };
         const exact = validators[sdk.distribution.ecosystem](sdk, metadata);
         resolved.push(`${sdk.id}:${sdk.distribution.defaultChannel}->${exact}`);

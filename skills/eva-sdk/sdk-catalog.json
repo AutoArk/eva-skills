@@ -80,6 +80,35 @@
           "url": "https://pub.dev/documentation/autoark_eva_client_sdk/latest/"
         }
       ]
+    },
+    {
+      "id": "client-sdk-cpp",
+      "sdkFamily": "client-sdk",
+      "language": "cpp",
+      "platforms": [
+        "macos-arm64",
+        "linux-arm64"
+      ],
+      "status": "published",
+      "description": "EVA 客户端 C++ SDK，提供 macOS ARM64 与 Linux ARM64 预编译包。",
+      "distribution": {
+        "ecosystem": "github-release",
+        "package": "EvaClient",
+        "repository": "AutoArk/eva-cpp-sdk-release",
+        "resolution": {
+          "mode": "latest-version"
+        },
+        "defaultChannel": "latest",
+        "publicUrl": "https://github.com/AutoArk/eva-cpp-sdk-release/releases",
+        "assetPattern": "eva-cpp-sdk-{version}-{platform}.tar.gz",
+        "checksumSuffix": ".sha256"
+      },
+      "documentation": [
+        {
+          "kind": "package-readme",
+          "url": "https://github.com/AutoArk/eva-cpp-sdk-release#readme"
+        }
+      ]
     }
   ]
 }

@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   loadSdkCatalog,
+  validateGitHubReleaseMetadata,
   validateNpmRegistryMetadata,
   validatePubRegistryMetadata,
   validatePyPiRegistryMetadata,
@@ -11,7 +12,7 @@ import {
 
 test("accepts the repository SDK catalog without stored versions", () => {
   const sdks = validateSdkCatalog(loadSdkCatalog());
-  assert.equal(sdks.length, 3);
+  assert.equal(sdks.length, 4);
   assert.equal(sdks[0].id, "client-sdk-typescript");
   assert.equal(sdks[0].distribution.defaultChannel, "latest");
   assert.deepEqual(sdks[0].distribution.resolution, { mode: "latest-version" });
@@ -33,7 +34,7 @@ test("rejects version fields anywhere in an SDK entry", () => {
 test("accepts an exact test version resolution", () => {
   const catalog = structuredClone(loadSdkCatalog());
   catalog.sdks[0].distribution.resolution = { mode: "version", value: "1.2.3" };
-  assert.equal(validateSdkCatalog(catalog).length, 3);
+  assert.equal(validateSdkCatalog(catalog).length, 4);
 });
 
 test("rejects non-official public URLs", () => {
@@ -82,4 +83,30 @@ test("rejects drifted Pub package metadata and non-exact versions", () => {
     }),
     /exact version/,
   );
+});
+
+test("accepts the official C++ GitHub Release and requires all platform assets", () => {
+  const sdk = validateSdkCatalog(loadSdkCatalog()).find((item) => item.id === "client-sdk-cpp");
+  const metadata = {
+    tag_name: "0.1.0",
+    draft: false,
+    prerelease: false,
+    assets: [
+      { name: "eva-cpp-sdk-0.1.0-macos-arm64.tar.gz" },
+      { name: "eva-cpp-sdk-0.1.0-macos-arm64.tar.gz.sha256" },
+      { name: "eva-cpp-sdk-0.1.0-linux-arm64.tar.gz" },
+      { name: "eva-cpp-sdk-0.1.0-linux-arm64.tar.gz.sha256" },
+    ],
+  };
+  assert.equal(validateGitHubReleaseMetadata(sdk, metadata), "0.1.0");
+
+  metadata.assets.pop();
+  assert.throws(() => validateGitHubReleaseMetadata(sdk, metadata), /release checksum missing/);
+});
+
+test("rejects a non-official C++ Release repository", () => {
+  const catalog = structuredClone(loadSdkCatalog());
+  const cpp = catalog.sdks.find((item) => item.id === "client-sdk-cpp");
+  cpp.distribution.repository = "someone/eva-cpp-sdk-release";
+  assert.throws(() => validateSdkCatalog(catalog), /GitHub repository must be/);
 });

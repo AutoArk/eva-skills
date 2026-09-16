@@ -189,10 +189,51 @@ export function validateCatalog(examplesRoot, catalogPath = "examples.json") {
     if (example.sdk.ecosystem === "npm") validated.push(validateNpmExample(exampleRoot, example));
     else if (example.sdk.ecosystem === "pub") validated.push(validatePubExample(exampleRoot, example));
     else if (example.sdk.ecosystem === "pypi") validated.push(validatePyPiExample(exampleRoot, example));
+    else if (example.sdk.ecosystem === "cmake") validated.push(validateCmakeExample(exampleRoot, example));
     else throw new Error(`${example.id}: unsupported SDK ecosystem ${example.sdk.ecosystem}`);
   }
 
   return validated;
+}
+
+export function validateCmakeExample(exampleRoot, example) {
+  assert(example.language === "cpp", `${example.id}: CMake SDK example must use C++`);
+  assert(example.sdk.package === "EvaClient", `${example.id}: CMake SDK package must be EvaClient`);
+  const cmakePath = join(exampleRoot, "CMakeLists.txt");
+  const preparePath = join(exampleRoot, "scripts", "prepare-sdk.mjs");
+  const launcherPath = join(exampleRoot, "scripts", "run-with-key-file.mjs");
+  assertFile(cmakePath, `${example.id} CMakeLists.txt`);
+  assertFile(preparePath, `${example.id} SDK preparation script`);
+  assertFile(launcherPath, `${example.id} key-file launcher`);
+
+  const cmake = readFileSync(cmakePath, "utf8");
+  const matches = [...cmake.matchAll(/set\(EVA_SDK_VERSION "([^"]+)"\)/g)];
+  assert(matches.length === 1, `${example.id}: CMake must declare exactly one EVA_SDK_VERSION`);
+  const sdkVersion = matches[0][1];
+  assert(exactVersionPattern.test(sdkVersion), `${example.id}: EVA_SDK_VERSION must be an exact version without v`);
+  assert(
+    cmake.includes("find_package(EvaClient ${EVA_REQUIRED_SDK_VERSION} EXACT CONFIG REQUIRED)"),
+    `${example.id}: CMake must require the exact effective EvaClient version`,
+  );
+  assert(
+    !/(?:FetchContent|ExternalProject|add_subdirectory|\/Users\/|\/private\/tmp\/)/.test(cmake),
+    `${example.id}: CMake must consume the public package without local SDK sources`,
+  );
+
+  const prepare = readFileSync(preparePath, "utf8");
+  assert(
+    prepare.includes("https://github.com/AutoArk/eva-cpp-sdk-release/releases/download/"),
+    `${example.id}: SDK preparation must use the official GitHub Release`,
+  );
+  assert(prepare.includes(".sha256"), `${example.id}: SDK preparation must verify the published checksum`);
+
+  return {
+    ecosystem: "cmake",
+    example,
+    exampleRoot,
+    sdkPackage: example.sdk.package,
+    sdkVersion,
+  };
 }
 
 export function validatePubExample(exampleRoot, example) {
@@ -427,6 +468,14 @@ export function runReleaseValidation({ sourceDir, skipBuild = false, keepTemp = 
             `${item.example.id}: Flutter mobile release validation requires macOS for the iOS build`,
           );
           run("flutter", ["build", "ios", "--release", "--no-codesign"], { cwd: item.exampleRoot });
+          continue;
+        }
+        if (item.ecosystem === "cmake") {
+          assert(
+            process.arch === "arm64" && ["darwin", "linux"].includes(process.platform),
+            `${item.example.id}: C++ release build requires a supported macOS ARM64 or Linux ARM64 host`,
+          );
+          run(process.execPath, ["scripts/prepare-sdk.mjs"], { cwd: item.exampleRoot });
           continue;
         }
         throw new Error(`${item.example.id}: unsupported build ecosystem ${item.ecosystem}`);

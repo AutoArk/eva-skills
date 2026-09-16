@@ -22,7 +22,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -34,7 +34,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -100,7 +100,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -112,7 +112,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -147,7 +147,7 @@
         "outcome": "complete-l2",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -168,7 +168,7 @@
         ],
         "forbidden": [
           "repeat-candidate-confirmation",
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -208,7 +208,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -219,7 +219,7 @@
         ],
         "forbidden": [
           "repeat-candidate-confirmation",
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -254,7 +254,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -267,7 +267,7 @@
         ],
         "forbidden": [
           "reuse-stale-demo-authorization",
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -302,7 +302,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -313,7 +313,7 @@
         ],
         "forbidden": [
           "reuse-demo-authorization-with-nonempty-directory",
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -349,7 +349,7 @@
         "outcome": "complete-l2",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "use-user-selected-demo-workspace",
@@ -367,7 +367,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -407,7 +407,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "use-task-temp-demo-workspace",
@@ -420,7 +420,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -456,7 +456,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "use-task-temp-demo-workspace",
@@ -469,7 +469,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -505,7 +505,7 @@
         "outcome": "blocked",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "use-task-temp-demo-workspace",
@@ -518,7 +518,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -555,7 +555,7 @@
         "outcome": "needs-confirmation",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "present-candidate-details",
@@ -567,7 +567,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -602,7 +602,7 @@
         "outcome": "complete-l2",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "use-task-temp-demo-workspace",
@@ -620,7 +620,7 @@
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -663,14 +663,14 @@
         "outcome": "unavailable",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "fail-closed-unavailable",
           "no-l3-claim"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -921,7 +921,7 @@
         "outcome": "blocked",
         "required": [
           "read-example-source-policy",
-          "resolve-latest-stable-example-tag",
+          "resolve-configured-example-branch",
           "pin-resolved-example-commit",
           "select-from-catalog",
           "map-example-to-target",
@@ -931,7 +931,7 @@
           "request-version-choice"
         ],
         "forbidden": [
-          "use-main",
+          "follow-branch-after-pin",
           "use-example-prerelease-tag",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -942,6 +942,119 @@
           "use-sdk-internal",
           "copy-demo-wholesale",
           "silently-change-sdk-version"
+        ]
+      }
+    },
+    {
+      "id": "integrate-cpp-from-github-release",
+      "prompt": "不要运行 Demo，直接把 C++ Client SDK 接进这个 ARM64 CMake 项目。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-cpp-sdk",
+        "integrationSource": "direct-sdk",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "empty-app"
+      },
+      "expected": {
+        "route": "integrate",
+        "outcome": "complete",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "bypass-demo-when-direct",
+          "resolve-latest-from-official-distribution",
+          "lock-resolved-exact-version",
+          "select-github-release-platform-asset",
+          "verify-github-release-checksum",
+          "use-cmake-package-config",
+          "map-sdk-to-target",
+          "preserve-unrelated-files",
+          "use-public-api-only",
+          "build-and-typecheck",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "require-demo-baseline",
+          "use-example-version-for-direct-integration",
+          "leave-floating-latest",
+          "use-github-source-archive",
+          "skip-release-checksum",
+          "upgrade-existing-sdk-without-request",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "modify-unrelated-file",
+          "use-sdk-internal",
+          "copy-demo-wholesale",
+          "silently-change-sdk-version",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "run-cpp-demo-from-testing-branch",
+      "prompt": "我确认运行 C++ 语音 Demo，使用当前测试中的 examples main，并放在任务临时目录。",
+      "fixture": {
+        "catalog": "single-cmake-demo",
+        "sdkCatalog": "not-used",
+        "integrationSource": "not-applicable",
+        "selection": "confirmed",
+        "demoWorkspace": "task-temp",
+        "cliState": "authenticated",
+        "keyInventory": "existing",
+        "keySave": "success",
+        "akCanary": "hidden-file",
+        "targetProject": "none"
+      },
+      "expected": {
+        "route": "run-demo",
+        "outcome": "complete-l2",
+        "required": [
+          "read-example-source-policy",
+          "resolve-configured-example-branch",
+          "pin-resolved-example-commit",
+          "select-from-catalog",
+          "use-task-temp-demo-workspace",
+          "select-github-release-platform-asset",
+          "verify-github-release-checksum",
+          "use-cmake-package-config",
+          "check-eva-whoami",
+          "enter-project-directory",
+          "list-eva-keys",
+          "save-eva-key-to-dotenv",
+          "treat-dotenv-path-as-opaque",
+          "pass-credential-path-to-documented-launcher",
+          "build-and-typecheck",
+          "keep-target-available",
+          "return-operation-and-teardown",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "follow-branch-after-pin",
+          "use-example-prerelease-tag",
+          "use-github-source-archive",
+          "skip-release-checksum",
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "invoke-cli-before-confirmation",
+          "restore-dependencies-before-confirmation",
+          "start-before-confirmation",
+          "start-without-credential-path-after-key-success",
+          "create-eva-key-when-existing",
+          "use-obsolete-eva-init",
+          "use-obsolete-eva-key-path",
+          "stop-target-prematurely",
+          "claim-l3"
         ]
       }
     },

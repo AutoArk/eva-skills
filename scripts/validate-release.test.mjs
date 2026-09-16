@@ -68,7 +68,7 @@ test("requires a valid resolution policy and official repository", () => {
 
 test("release validation requires default SDK dependency resolution", () => {
   const sdks = validateSdkCatalog(loadSdkCatalog());
-  assert.equal(validateReleaseSdkResolutions(sdks).length, 3);
+  assert.equal(validateReleaseSdkResolutions(sdks).length, 4);
 
   const testSdks = structuredClone(sdks);
   testSdks[0].distribution.resolution = { mode: "version", value: "1.2.3" };
@@ -174,6 +174,23 @@ test("validates a Pub catalog, exact lock, checksum, and public Dart imports", (
     validateDartPublicImports(fixture.exampleRoot, "autoark_eva_client_sdk"),
     ["package:autoark_eva_client_sdk/autoark_eva_client_sdk.dart"],
   );
+});
+
+test("validates a CMake example pinned to an exact GitHub Release", () => {
+  const fixture = createCmakeFixture();
+  const examples = validateCatalog(fixture.root);
+  assert.equal(examples.length, 1);
+  assert.equal(examples[0].sdkPackage, "EvaClient");
+  assert.equal(examples[0].sdkVersion, "0.1.0");
+});
+
+test("rejects CMake examples that bypass the public Release checksum", () => {
+  const fixture = createCmakeFixture();
+  writeFileSync(
+    join(fixture.exampleRoot, "scripts", "prepare-sdk.mjs"),
+    'const url = "https://github.com/AutoArk/eva-cpp-sdk-release/releases/download/0.1.0/sdk.tar.gz";\n',
+  );
+  assert.throws(() => validateCatalog(fixture.root), /verify the published checksum/);
 });
 
 test("rejects Pub manifest and lock version drift", () => {
@@ -408,6 +425,37 @@ dependencies:
     "import 'package:autoark_eva_client_sdk/autoark_eva_client_sdk.dart';\n",
   );
   return { exampleRoot, lockText, pubspecText, root };
+}
+
+function createCmakeFixture() {
+  const root = mkdtempSync(join(tmpdir(), "eva-release-cmake-test-"));
+  temporaryRoots.push(root);
+  const exampleRoot = join(root, "client-sdk", "cpp", "demo");
+  mkdirSync(join(exampleRoot, "scripts"), { recursive: true });
+  const catalog = {
+    schemaVersion: 1,
+    examples: [{
+      id: "client-sdk-cpp-demo",
+      sdkFamily: "client-sdk",
+      language: "cpp",
+      platform: "terminal",
+      path: "client-sdk/cpp/demo",
+      sdk: { ecosystem: "cmake", package: "EvaClient" },
+      status: "release",
+    }],
+  };
+  writeFileSync(join(root, "examples.json"), `${JSON.stringify(catalog, null, 2)}\n`);
+  writeFileSync(join(exampleRoot, "README.md"), "# C++ Demo\n");
+  writeFileSync(
+    join(exampleRoot, "CMakeLists.txt"),
+    'set(EVA_SDK_VERSION "0.1.0")\nset(EVA_REQUIRED_SDK_VERSION "${EVA_SDK_VERSION}")\nfind_package(EvaClient ${EVA_REQUIRED_SDK_VERSION} EXACT CONFIG REQUIRED)\n',
+  );
+  writeFileSync(
+    join(exampleRoot, "scripts", "prepare-sdk.mjs"),
+    'const url = "https://github.com/AutoArk/eva-cpp-sdk-release/releases/download/0.1.0/sdk.tar.gz";\nconst checksum = `${url}.sha256`;\n',
+  );
+  writeFileSync(join(exampleRoot, "scripts", "run-with-key-file.mjs"), "// fixture\n");
+  return { exampleRoot, root };
 }
 
 function createReferenceSource() {

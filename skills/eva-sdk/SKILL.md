@@ -29,7 +29,7 @@ license: MIT
 
 - 依赖模式直接写在 `reference-sources.json` 的 source `resolution` 和 `sdk-catalog.json` 每个 SDK distribution 的 `resolution` 中；可取值、`value` 格式与解析方式见 [dependency-resolution.md](dependency-resolution.md)。
 - 默认值是 examples `latest-tag` 和 SDK `latest-version`；发布前必须恢复为这两个默认值。
-- 不支持用户配置 commit。branch 是可变引用；运行时仍需记录解析出的实际 commit 作为证据。
+- 不支持用户配置 commit。测试中的 branch 是可变引用；每次任务开始时解析 HEAD，并以实际 commit 冻结该任务的后续读取、确认与运行。当前 examples 在未正式发布期间使用 `main`，上线前恢复 `latest-tag`。
 
 ## 外部文档读取方法
 
@@ -60,8 +60,8 @@ license: MIT
 1. 读取 `sdk-catalog.json`，按 SDK family、语言、平台、distribution identity 或用户项目已安装依赖筛选。请求模糊或命中多个 SDK 时展示实际候选并让用户选择；精确命中时报告选中的 SDK 与官方公网来源。
 2. 用户明确要求直接接入或没有要求 Demo 时，不克隆 examples、不要求先运行 Demo，也不采用 example manifest 中的版本。
 3. 目标项目已安装所选 SDK 时，默认保留当前解析版本并读取该版本发布物的公共契约；除非用户明确要求升级，不查询或切换到最新版。
-4. 目标项目尚未安装且用户未指定版本时，从 SDK catalog 的官方 distribution 查询 `defaultChannel`，解析为当时的精确版本，再用目标项目原生依赖管理方式安装并写入其可复现解析文件。允许查询 `latest`，但不得把未解析的浮动 channel 留作完成证据。
-5. 用户指定版本时，先确认官方 distribution 确实发布该版本。安装、升级或降级后都报告最终解析的精确版本。
+4. 目标项目尚未安装且用户未指定版本时，从 SDK catalog 的官方 distribution 查询 `defaultChannel`，解析为当时的精确版本，再按该 distribution 的公开方式安装并留下可复现身份。Registry 包写入目标项目的解析文件；GitHub Release 选择目标平台资产及其 `.sha256`，校验后解压，并通过公开 CMake package 接入。允许查询 `latest`，但不得把浮动 channel、latest 下载 URL 或未校验资产留作完成证据。
+5. 用户指定版本时，先确认官方 distribution 确实发布该版本。安装、升级或降级后都报告最终解析的精确版本；GitHub Release 同时报告 repository、tag、平台资产名和 SHA-256。
 6. 从选定发布物的公共入口、声明/头文件、schema、随包 README 和 catalog 中的官方文档建立 source-to-target 映射；不需要 example 才能确认公共 API。
 
 ## Demo 选择确认

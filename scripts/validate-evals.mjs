@@ -13,10 +13,17 @@ const catalogs = new Set([
   "missing-requested-route",
   "multiple-demos",
   "not-used",
+  "single-cmake-demo",
   "single-npm-demo",
   "single-pub-demo",
 ]);
-const sdkCatalogs = new Set(["missing-requested-sdk", "multiple-sdks", "not-used", "single-sdk"]);
+const sdkCatalogs = new Set([
+  "missing-requested-sdk",
+  "multiple-sdks",
+  "not-used",
+  "single-cpp-sdk",
+  "single-sdk",
+]);
 const integrationSources = new Set(["direct-sdk", "example", "existing-project", "not-applicable"]);
 const selectionModes = new Set([
   "ambiguous",
@@ -84,19 +91,22 @@ const requiredBehaviors = new Set([
   "request-sdk-selection",
   "return-operation-and-teardown",
   "resolve-latest-from-official-distribution",
-  "resolve-latest-stable-example-tag",
+  "resolve-configured-example-branch",
   "reuse-explicit-demo-authorization",
   "retry-eva-whoami-with-user-session-access",
   "require-whoami-recheck-after-login",
   "save-eva-key-to-dotenv",
+  "select-github-release-platform-asset",
   "select-from-catalog",
   "start-eva-login",
   "treat-dotenv-path-as-opaque",
   "use-native-lockfile",
+  "use-cmake-package-config",
   "use-public-api-only",
   "use-task-temp-demo-workspace",
   "use-user-selected-demo-workspace",
   "verify-empty-demo-destination",
+  "verify-github-release-checksum",
   "pin-resolved-example-commit",
   "wait-for-browser-login",
   "wait-for-cli-install-confirmation",
@@ -115,6 +125,7 @@ const forbiddenBehaviors = new Set([
   "create-eva-key-without-no-show-key",
   "copy-demo-wholesale",
   "echo-ak-value",
+  "follow-branch-after-pin",
   "infer-uncataloged-route",
   "infer-unpublished-sdk",
   "install-before-sdk-selection",
@@ -141,10 +152,11 @@ const forbiddenBehaviors = new Set([
   "treat-credentialless-build-as-demo-start",
   "use-example-prerelease-tag",
   "use-example-version-for-direct-integration",
-  "use-main",
+  "use-github-source-archive",
   "use-ordinary-launcher-without-explicit-request",
   "use-sdk-internal",
   "leave-floating-latest",
+  "skip-release-checksum",
   "upgrade-existing-sdk-without-request",
   "use-obsolete-eva-init",
   "use-obsolete-eva-key-path",
@@ -350,12 +362,15 @@ function validateCaseSemantics(evalCase) {
   if (usesExamples) {
     for (const behavior of [
       "read-example-source-policy",
-      "resolve-latest-stable-example-tag",
+      "resolve-configured-example-branch",
       "pin-resolved-example-commit",
     ]) {
       assert(expected.required.includes(behavior), `${id}: examples workflow requires ${behavior}`);
     }
-    assert(expected.forbidden.includes("use-main"), `${id}: examples workflow must forbid main`);
+    assert(
+      expected.forbidden.includes("follow-branch-after-pin"),
+      `${id}: examples workflow must freeze the resolved branch commit`,
+    );
     assert(
       expected.forbidden.includes("use-example-prerelease-tag"),
       `${id}: examples workflow must forbid prerelease tags`,
@@ -697,6 +712,32 @@ function validateCaseSemantics(evalCase) {
         expected.forbidden.includes("upgrade-existing-sdk-without-request"),
         `${id}: implicit existing SDK upgrade must be forbidden`,
       );
+    }
+    if (fixture.sdkCatalog === "single-cpp-sdk") {
+      for (const behavior of [
+        "resolve-latest-from-official-distribution",
+        "lock-resolved-exact-version",
+        "select-github-release-platform-asset",
+        "verify-github-release-checksum",
+        "use-cmake-package-config",
+      ]) {
+        assert(expected.required.includes(behavior), `${id}: direct C++ integration requires ${behavior}`);
+      }
+      for (const behavior of ["use-github-source-archive", "skip-release-checksum"]) {
+        assert(expected.forbidden.includes(behavior), `${id}: direct C++ integration must forbid ${behavior}`);
+      }
+    }
+  }
+  if (fixture.catalog === "single-cmake-demo") {
+    for (const behavior of [
+      "select-github-release-platform-asset",
+      "verify-github-release-checksum",
+      "use-cmake-package-config",
+    ]) {
+      assert(expected.required.includes(behavior), `${id}: CMake Demo requires ${behavior}`);
+    }
+    for (const behavior of ["use-github-source-archive", "skip-release-checksum"]) {
+      assert(expected.forbidden.includes(behavior), `${id}: CMake Demo must forbid ${behavior}`);
     }
   }
   if (fixture.integrationSource === "existing-project") {

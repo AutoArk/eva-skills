@@ -67,15 +67,15 @@ test("requires a valid resolution policy and official repository", () => {
 });
 
 test("release validation requires default SDK dependency resolution", () => {
-  const sdks = validateSdkCatalog(loadSdkCatalog());
-  assert.equal(validateReleaseSdkResolutions(sdks).length, 4);
-
-  const testSdks = structuredClone(sdks);
-  testSdks[0].distribution.resolution = { mode: "version", value: "1.2.3" };
+  const testSdks = validateSdkCatalog(loadSdkCatalog());
   assert.throws(
     () => validateReleaseSdkResolutions(testSdks),
     /requires latest-version SDK resolution: client-sdk-typescript/,
   );
+
+  const releaseSdks = structuredClone(testSdks);
+  releaseSdks[0].distribution.resolution = { mode: "latest-version" };
+  assert.equal(validateReleaseSdkResolutions(releaseSdks).length, 4);
 });
 
 test("selects the highest stable numeric SemVer tag", () => {

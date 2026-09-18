@@ -161,18 +161,18 @@ export function validateCliProtocol(documents) {
     "run-demo L2 must reject a healthy process started without the credential path",
   );
   assert(
-    documents.skill.includes("同时提供凭证路径启动入口和不带凭证的普通启动入口")
-      && documents.skill.includes("默认必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口"),
-    "SKILL.md must prefer the credential launcher when both Demo launch modes exist",
+    documents.skill.includes("本地真实启动必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口")
+      && documents.skill.includes("不得创建或使用要求手工输入、粘贴或回显 AK"),
+    "SKILL.md must require the CLI credential launcher for local real starts",
   );
   assert(
     documents.runDemo.includes("默认启动入口立即确定为凭证路径启动入口")
-      && documents.runDemo.includes("只有用户明确要求在运行时手工输入 AK 时"),
-    "run-demo must choose the credential launcher unless runtime AK input was explicitly requested",
+      && documents.runDemo.includes("不得切换为手工输入 AK"),
+    "run-demo must choose the CLI credential launcher without a manual AK fallback",
   );
   assert(
     documents.runDemo.includes("不得自动改用不带 AK 的普通启动入口")
-      && documents.runDemo.includes("不得擅自改为等待用户在设备端手工输入 AK"),
+      && documents.runDemo.includes("不得改为等待用户在设备端手工输入 AK"),
     "run-demo must not silently downgrade when the EVA CLI credential path is blocked",
   );
   assert(

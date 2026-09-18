@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 
 import {
   loadSdkCatalog,
   validateGitHubReleaseMetadata,
+  validateLocalNpmPackage,
   validateNpmRegistryMetadata,
   validatePubRegistryMetadata,
   validatePyPiRegistryMetadata,
@@ -15,7 +17,8 @@ test("accepts the repository SDK catalog without stored versions", () => {
   assert.equal(sdks.length, 4);
   assert.equal(sdks[0].id, "client-sdk-typescript");
   assert.equal(sdks[0].distribution.defaultChannel, "latest");
-  assert.deepEqual(sdks[0].distribution.resolution, { mode: "latest-version" });
+  assert.equal(sdks[0].distribution.resolution.mode, "local-package");
+  assert.match(sdks[0].distribution.resolution.value, /eva-client-sdk-ts-1\.0\.7-dev\.0\.tgz$/);
 });
 
 test("accepts the PyPI SDK distribution", () => {
@@ -54,6 +57,55 @@ test("resolves the default channel to an exact registry version", () => {
     () => validateNpmRegistryMetadata(sdk, { name: sdk.distribution.package, "dist-tags": {} }),
     /default channel must resolve/,
   );
+});
+
+test("validates the configured local npm package identity and release evidence", () => {
+  const sdk = structuredClone(validateSdkCatalog(loadSdkCatalog())[0]);
+  const artifact = Buffer.from("local npm artifact");
+  sdk.distribution.resolution.sha256 = createHash("sha256").update(artifact).digest("hex");
+  const releaseManifest = {
+    artifact: {
+      sha256: sdk.distribution.resolution.sha256,
+      payloadDigest: sdk.distribution.resolution.payloadDigest,
+    },
+    buildSourceSha: sdk.distribution.resolution.sourceCommit,
+    package: { name: sdk.distribution.package, version: "1.0.7-dev.0" },
+    source: { commit: sdk.distribution.resolution.sourceCommit, dirty: false },
+  };
+  const packageManifest = { name: sdk.distribution.package, version: "1.0.7-dev.0" };
+  assert.equal(
+    validateLocalNpmPackage(sdk, {
+      artifact,
+      releaseManifest,
+      packageManifest,
+      archiveEntries: ["package/", "package/package.json", "package/dist/index.js"],
+    }),
+    "1.0.7-dev.0",
+  );
+  assert.throws(
+    () => validateLocalNpmPackage(sdk, {
+      artifact: Buffer.from("changed"),
+      releaseManifest,
+      packageManifest,
+      archiveEntries: ["package/package.json"],
+    }),
+    /SHA-256 mismatch/,
+  );
+  assert.throws(
+    () => validateLocalNpmPackage(sdk, {
+      artifact,
+      releaseManifest,
+      packageManifest,
+      archiveEntries: ["package/package.json", "package/../escape"],
+    }),
+    /unsafe path/,
+  );
+});
+
+test("rejects incomplete local package resolution metadata", () => {
+  const catalog = structuredClone(loadSdkCatalog());
+  delete catalog.sdks[0].distribution.resolution.payloadDigest;
+  assert.throws(() => validateSdkCatalog(catalog), /fields must be/);
 });
 
 test("accepts the Pub SDK distribution and resolves its latest release", () => {

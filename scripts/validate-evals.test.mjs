@@ -5,7 +5,7 @@ import { loadEvalSpec, validateEvalSpec } from "./validate-evals.mjs";
 
 test("accepts the repository eval catalog and its required coverage", () => {
   const result = validateEvalSpec(loadEvalSpec());
-  assert.deepEqual(result, { cases: 23, skill: "eva-sdk" });
+  assert.deepEqual(result, { cases: 29, skill: "eva-sdk" });
 });
 
 test("requires the exact Demo request to carry the reusable authorization behavior", () => {
@@ -221,7 +221,10 @@ test("latest is resolved once and the exact version must be locked", () => {
   direct.expected.required = direct.expected.required.filter(
     (behavior) => behavior !== "lock-resolved-exact-version",
   );
-  assert.throws(() => validateEvalSpec(spec), /must lock the resolved version|missing required behavior coverage/);
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /must lock the resolved version|direct local SDK integration requires lock-resolved-exact-version|missing required behavior coverage/,
+  );
 });
 
 test("global CLI installation requires separate user confirmation", () => {
@@ -303,6 +306,64 @@ test("user-selected Demo destination cannot overwrite a non-empty directory", ()
     (behavior) => behavior !== "overwrite-nonempty-demo-workspace",
   );
   assert.throws(() => validateEvalSpec(spec), /non-empty user-selected workspace must not be overwritten/);
+});
+
+test("greenfield build stays independent from runtime credentials", () => {
+  const spec = cloneSpec();
+  const buildOnly = spec.cases.find((evalCase) => evalCase.id === "integrate-new-consumer-build-only");
+  buildOnly.expected.required = buildOnly.expected.required.filter(
+    (behavior) => behavior !== "build-without-runtime-credential",
+  );
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /empty-directory integration requires build-without-runtime-credential/,
+  );
+});
+
+test("greenfield real start uses the CLI credential path without manual AK input", () => {
+  const spec = cloneSpec();
+  const realStart = spec.cases.find((evalCase) => evalCase.id === "integrate-new-consumer-real-start");
+  realStart.expected.required = realStart.expected.required.filter(
+    (behavior) => behavior !== "create-credential-path-launcher",
+  );
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /empty-directory real start requires create-credential-path-launcher/,
+  );
+});
+
+test("an unspecified voice change waits for a compatible user choice", () => {
+  const spec = cloneSpec();
+  const voiceChoice = spec.cases.find((evalCase) => evalCase.id === "customize-voice-choice-waits");
+  voiceChoice.expected.required = voiceChoice.expected.required.filter(
+    (behavior) => behavior !== "wait-for-voice-selection",
+  );
+  assert.throws(() => validateEvalSpec(spec), /voice choice requires wait-for-voice-selection/);
+});
+
+test("a cross-model voice is rejected instead of applied", () => {
+  const spec = cloneSpec();
+  const incompatible = spec.cases.find(
+    (evalCase) => evalCase.id === "customize-incompatible-voice-rejected",
+  );
+  incompatible.expected.required = incompatible.expected.required.filter(
+    (behavior) => behavior !== "reject-cross-model-voice",
+  );
+  assert.throws(() => validateEvalSpec(spec), /incompatible voice requires reject-cross-model-voice/);
+});
+
+test("acoustic troubleshooting keeps full duplex until evidence supports a user-chosen fallback", () => {
+  const spec = cloneSpec();
+  const troubleshooting = spec.cases.find(
+    (evalCase) => evalCase.id === "customize-self-interruption-diagnoses-before-degrading",
+  );
+  troubleshooting.expected.forbidden = troubleshooting.expected.forbidden.filter(
+    (behavior) => behavior !== "default-to-half-duplex",
+  );
+  assert.throws(
+    () => validateEvalSpec(spec),
+    /acoustic troubleshooting must forbid default-to-half-duplex/,
+  );
 });
 
 function cloneSpec() {

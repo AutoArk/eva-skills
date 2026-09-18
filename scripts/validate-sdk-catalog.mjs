@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -140,6 +141,55 @@ export function validateGitHubReleaseMetadata(sdk, metadata) {
   return resolved;
 }
 
+export function validateLocalNpmPackage(sdk, inputs = {}) {
+  assert(sdk.distribution.ecosystem === "npm", `${sdk.id}: local package must use the npm ecosystem`);
+  const resolution = sdk.distribution.resolution;
+  assert(resolution.mode === "local-package", `${sdk.id}: resolution is not a local package`);
+  const artifact = inputs.artifact ?? readFileSync(resolution.value);
+  const actualSha256 = createHash("sha256").update(artifact).digest("hex");
+  assert(actualSha256 === resolution.sha256, `${sdk.id}: local package SHA-256 mismatch`);
+
+  const releaseManifest = inputs.releaseManifest ?? JSON.parse(readFileSync(resolution.manifest, "utf8"));
+  assertRecord(releaseManifest, `${sdk.id} local release manifest`);
+  assert(releaseManifest.artifact?.sha256 === resolution.sha256, `${sdk.id}: release manifest SHA-256 drifted`);
+  assert(
+    releaseManifest.artifact?.payloadDigest === resolution.payloadDigest,
+    `${sdk.id}: release manifest payload digest drifted`,
+  );
+  assert(releaseManifest.buildSourceSha === resolution.sourceCommit, `${sdk.id}: build source commit drifted`);
+  assert(releaseManifest.source?.commit === resolution.sourceCommit, `${sdk.id}: source commit drifted`);
+  assert(releaseManifest.source?.dirty === false, `${sdk.id}: local package source must be clean`);
+  assert(releaseManifest.package?.name === sdk.distribution.package, `${sdk.id}: local package name drifted`);
+  const resolved = releaseManifest.package?.version;
+  assertNonEmptyString(resolved, `${sdk.id}: local package version`);
+  assert(exactVersionPattern.test(resolved), `${sdk.id}: local package must have an exact version`);
+
+  const packageManifest = inputs.packageManifest ?? JSON.parse(execFileSync(
+    "tar",
+    ["-xOf", resolution.value, "package/package.json"],
+    { encoding: "utf8" },
+  ));
+  assert(packageManifest.name === sdk.distribution.package, `${sdk.id}: packed npm package name drifted`);
+  assert(packageManifest.version === resolved, `${sdk.id}: packed npm package version drifted`);
+  const archiveEntries = inputs.archiveEntries ?? execFileSync(
+    "tar",
+    ["-tzf", resolution.value],
+    { encoding: "utf8" },
+  ).split("\n").filter(Boolean);
+  assert(archiveEntries.length > 0, `${sdk.id}: local package archive must not be empty`);
+  const uniqueEntries = new Set(archiveEntries);
+  assert(uniqueEntries.size === archiveEntries.length, `${sdk.id}: local package archive contains duplicate paths`);
+  for (const entry of archiveEntries) {
+    assert(
+      (entry === "package" || entry.startsWith("package/"))
+        && !entry.split("/").includes("..")
+        && !entry.includes("\\"),
+      `${sdk.id}: local package archive contains an unsafe path: ${entry}`,
+    );
+  }
+  return resolved;
+}
+
 export function queryLiveSdkMetadata(sdk) {
   if (sdk.distribution.ecosystem === "pypi") {
     const output = execFileSync("curl", ["-fsSL", `https://pypi.org/pypi/${sdk.distribution.package}/json`], { encoding: "utf8" });
@@ -206,7 +256,7 @@ function validateDistribution(sdk) {
   const packagePattern = packagePatterns[distribution.ecosystem];
   assert(packagePattern.test(distribution.package), `${sdk.id}: invalid ${distribution.ecosystem} package`);
   assert(distribution.defaultChannel === "latest", `${sdk.id}: default channel must be latest`);
-  validateResolution(distribution.resolution, `${sdk.id}.distribution.resolution`);
+  validateResolution(distribution.resolution, `${sdk.id}.distribution.resolution`, distribution.ecosystem);
   validatePublicUrl(distribution.publicUrl, `${sdk.id}.distribution.publicUrl`);
   if (distribution.ecosystem === "github-release") {
     assert(distribution.repository === officialCppRepository, `${sdk.id}: GitHub repository must be ${officialCppRepository}`);
@@ -233,9 +283,29 @@ function validateDistribution(sdk) {
   );
 }
 
-function validateResolution(resolution, label) {
+function validateResolution(resolution, label, ecosystem) {
   assertRecord(resolution, label);
   const keys = Object.keys(resolution).sort();
+  if (resolution.mode === "local-package") {
+    assert(ecosystem === "npm", `${label}: local-package is only supported for npm`);
+    assertExactKeys(
+      resolution,
+      ["mode", "value", "manifest", "sha256", "payloadDigest", "sourceCommit"],
+      label,
+    );
+    assertNonEmptyString(resolution.value, `${label}.value`);
+    assert(isAbsolute(resolution.value) && resolution.value.endsWith(".tgz"), `${label}.value must be an absolute .tgz path`);
+    assertNonEmptyString(resolution.manifest, `${label}.manifest`);
+    assert(
+      isAbsolute(resolution.manifest) && basename(resolution.manifest) === "manifest.json",
+      `${label}.manifest must be an absolute manifest.json path`,
+    );
+    for (const field of ["sha256", "payloadDigest"]) {
+      assert(/^[0-9a-f]{64}$/.test(resolution[field]), `${label}.${field} must be a SHA-256 digest`);
+    }
+    assert(/^[0-9a-f]{40}$/.test(resolution.sourceCommit), `${label}.sourceCommit must be a full Git commit`);
+    return;
+  }
   assert(keys.length === 1 || (keys.length === 2 && keys.includes("value")), `${label} has invalid fields`);
   assert(["latest-version", "version"].includes(resolution.mode), `${label}: unsupported mode`);
   if (resolution.mode === "latest-version") {
@@ -308,6 +378,11 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
     const resolved = [];
     if (options.live) {
       for (const sdk of sdks) {
+        if (sdk.distribution.resolution.mode === "local-package") {
+          const exact = validateLocalNpmPackage(sdk);
+          resolved.push(`${sdk.id}:local-package->${exact}`);
+          continue;
+        }
         const metadata = queryLiveSdkMetadata(sdk);
         const validators = {
           npm: validateNpmRegistryMetadata,

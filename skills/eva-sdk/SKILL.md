@@ -1,6 +1,6 @@
 ---
 name: eva-sdk
-description: 基于已发布 EVA SDK 公共 API 进行选型、接入、配置、消费方验证排障或运行官方 Demo。泛称语音 Demo 仅在已有 EVA 上下文时适用；不用于 SDK 实现源码修改、公共契约设计或其他产品的 Demo。
+description: 基于已发布 EVA SDK 公共 API 进行选型、创建或接入消费方应用、配置、验证排障或运行官方 Demo。泛称语音 Demo 仅在已有 EVA 上下文时适用；不用于 SDK 实现源码修改、公共契约设计或其他产品的 Demo。
 license: MIT
 ---
 
@@ -17,9 +17,9 @@ license: MIT
 - 绝不执行会把 AK 明文写入 stdout、stderr、终端、日志或工具结果的查看/显示命令。命令是否会回显 AK 不明确时停止，不要试运行；否则输出会进入 agent 和 LLM 上下文。
 - 不检查 `.env` 的内容、元数据、权限或有效性；不移动、删除、覆盖、改权限或复制该文件。
 - 不要求用户粘贴 AK，不打印由该文件派生的环境或配置，不启用会回显参数或环境的 tracing。
-- 只按所选 example 的文档，把 `<绝对项目目录>/.env` 作为不透明路径参数交给其明确声明的凭证路径启动入口。允许目标进程读取文件；agent 不读取。
-- 保存 `.env` 不等于凭证流程完成。运行 Demo 时，必须把该文件的绝对路径实际传入上述启动入口；不得在保存成功后改用不携带该路径的普通启动入口，也不得仅因服务进程存活就声称启动完成。
-- 运行 Demo 时，如果 example 同时提供凭证路径启动入口和不带凭证的普通启动入口，默认必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口。只有用户明确要求在运行时手工输入 AK 时，才允许选择普通启动入口。
+- 按目标消费方或所选 example 的公开文档，把 `<绝对项目目录>/.env` 作为不透明路径参数交给其明确声明的凭证路径启动入口。允许目标进程读取文件；agent 不读取。
+- 保存 `.env` 不等于凭证流程完成。真实启动时必须把该文件的绝对路径实际传入上述入口；不得在保存成功后改用不携带该路径的普通启动入口，也不得仅因服务进程存活就声称启动完成。
+- 本地真实启动必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口；不得创建或使用要求手工输入、粘贴或回显 AK 的 UI、配置步骤或命令参数。
 - CLI 检查、安装、浏览器人工登录、登录复查、进入项目目录、key 列出/创建/保存的精确命令与顺序只以 [references/cli.md](references/cli.md) 为准；失败时按原始阶段报告，不读取本地文件辅助诊断。
 - CLI 全局安装必须取得用户独立的明确确认；未登录时 agent 可以按 [references/cli.md](references/cli.md) 启动浏览器登录流程，但浏览器中的登录必须由用户亲自完成并按 CLI 流程复查，不能把浏览器已打开、命令已启动或命令已退出当作登录成功。
 
@@ -30,6 +30,7 @@ license: MIT
 - 依赖模式直接写在 `reference-sources.json` 的 source `resolution` 和 `sdk-catalog.json` 每个 SDK distribution 的 `resolution` 中；可取值、`value` 格式与解析方式见 [dependency-resolution.md](dependency-resolution.md)。
 - 默认值是 examples `latest-tag` 和 SDK `latest-version`；发布前必须恢复为这两个默认值。
 - 不支持用户配置 commit。测试中的 branch 是可变引用；每次任务开始时解析 HEAD，并以实际 commit 冻结该任务的后续读取、确认与运行。当前 examples 在未正式发布期间使用 `main`，上线前恢复 `latest-tag`。
+- 当前 TypeScript SDK 使用 `local-package` 测试 resolution。使用前必须验证配置中的绝对 `.tgz` 路径、release manifest、SHA-256、payload digest、source commit、包名和包内精确版本；任一不一致时停止。正式发布前恢复 `latest-version`。
 
 ## 外部文档读取方法
 
@@ -43,7 +44,7 @@ license: MIT
 - `sdk-catalog.json`：随 skill release 维护的已发布 SDK 目录，记录 SDK family、语言、平台、描述、官方分发身份、公网页面和公开文档；不记录版本号，也不从 examples 反推 SDK 列表。
 - `reference-sources.json` 中 `purpose: examples-catalog` 的来源声明官方 examples 仓库、依赖策略和 catalog 路径；`purpose: model-catalog` 的来源提供 Gateway 模型能力参考。Examples catalog 只决定当前可运行的 Demo，不决定全部可接入 SDK。
 
-用户问当前有哪些 SDK、直接接入、修改已有 SDK 消费方应用或询问公共 API 时，从 SDK catalog 出发。用户明确要运行 Demo、以 Demo 为接入基线或需要先证明环境时，才读取 examples catalog。
+用户问当前有哪些 SDK、从零创建或接入消费方应用、修改已有 SDK 消费方应用或询问公共 API 时，从 SDK catalog 出发。用户明确要运行官方 Demo、以官方 Demo 为接入基线或需要先证明官方基线时，才读取 examples catalog；用户自行描述业务场景并要求创建应用不等于选择官方 Demo。
 
 ## Demo 依赖解析
 
@@ -58,9 +59,9 @@ license: MIT
 ## 直接 SDK 路由与版本
 
 1. 读取 `sdk-catalog.json`，按 SDK family、语言、平台、distribution identity 或用户项目已安装依赖筛选。请求模糊或命中多个 SDK 时展示实际候选并让用户选择；精确命中时报告选中的 SDK 与官方公网来源。
-2. 用户明确要求直接接入或没有要求 Demo 时，不克隆 examples、不要求先运行 Demo，也不采用 example manifest 中的版本。
+2. 用户明确要求直接创建、接入或没有要求官方 Demo 时，不克隆 examples、不要求先运行 Demo，也不采用 example manifest 中的版本。目标目录为空时按用户指定的语言、平台和运行形态创建最小消费方应用；目标已有内容时保留其框架、目录结构与依赖真相源。
 3. 目标项目已安装所选 SDK 时，默认保留当前解析版本并读取该版本发布物的公共契约；除非用户明确要求升级，不查询或切换到最新版。
-4. 目标项目尚未安装且用户未指定版本时，从 SDK catalog 的官方 distribution 查询 `defaultChannel`，解析为当时的精确版本，再按该 distribution 的公开方式安装并留下可复现身份。Registry 包写入目标项目的解析文件；GitHub Release 选择目标平台资产及其 `.sha256`，校验后解压，并通过公开 CMake package 接入。允许查询 `latest`，但不得把浮动 channel、latest 下载 URL 或未校验资产留作完成证据。
+4. 目标项目尚未安装且用户未指定版本时，先读取 distribution resolution。`local-package` 验证本地 artifact 与 release manifest 的完整身份后使用该精确包，不查询 registry，并明确标记结果只适用于本机测试；其它模式从官方 distribution 查询或验证精确版本，再按该 distribution 的公开方式安装并留下可复现身份。Registry 包写入目标项目的解析文件；GitHub Release 选择目标平台资产及其 `.sha256`，校验后解压，并通过公开 CMake package 接入。不得把浮动 channel、latest 下载 URL 或未校验资产留作完成证据。
 5. 用户指定版本时，先确认官方 distribution 确实发布该版本。安装、升级或降级后都报告最终解析的精确版本；GitHub Release 同时报告 repository、tag、平台资产名和 SHA-256。
 6. 从选定发布物的公共入口、声明/头文件、schema、随包 README 和 catalog 中的官方文档建立 source-to-target 映射；不需要 example 才能确认公共 API。
 
@@ -82,7 +83,7 @@ license: MIT
 
 - 运行或体验官方 demo：完整读取 [references/run-demo.md](references/run-demo.md) 并执行。
 - 需要安装/登录 EVA CLI，或在本地项目目录选择/创建 key 并保存 `.env`：完整读取 [references/cli.md](references/cli.md) 并执行。
-- 接入现有应用：完整读取 [references/integrate.md](references/integrate.md) 并执行；默认走直接 SDK 路径，只有用户明确选择 Demo 基线时才依赖 example。
+- 创建或接入消费方应用：完整读取 [references/integrate.md](references/integrate.md) 并执行；默认走直接 SDK 路径，只有用户明确选择官方 Demo 基线时才依赖 example。
 - 修改公开配置、控制、观察面、UI 或正式扩展点：完整读取 [references/customize.md](references/customize.md) 并执行。
 - 纯模型或参数问答（包括采样率、音色、语言、温度、格式、延迟等）：读取 [references/model-parameters.md](references/model-parameters.md) 的“参数问答与可行性”小节及对应公开来源。需要写入配置、切换模型或验证参数组合时完整读取该 reference。必须根据当前 SDK 的公开能力和限制判断调用组合是否可行，不要求 SDK 逐一列出模型，也不得只替换模型名而跳过配套参数核对。
 - 简单 API 问答：从 SDK catalog 定位官方发布物并读取公共材料，不强制读取或启动 Demo。
@@ -100,9 +101,9 @@ license: MIT
 
 按从便宜到昂贵的顺序留证据，并选择适合当前语言和平台的传感器：
 
-- L0：所选 SDK/Demo 目录、适用的 tag/commit、依赖解析、公共入口，以及编译/静态检查/schema 约束正确；静态反查未出现 `.env` 读取或 AK 回显操作。
-- L1：example 声明的 release/production 构建、打包或平台等价步骤通过，必要运行资产可定位。
-- L2：目标运行形态已通过 example 明确声明的凭证路径启动入口启动；当前项目目录下 `.env` 的绝对路径已作为不透明输入实际传入。目标可从外部观察，相关状态、日志、健康信号或 UI 无阻断错误；已返回可操作入口和停止、复位或断开方式。
-- L3：用户在真实凭证、网络、权限与目标设备/运行环境中验证 example 定义的核心场景和资源释放。
+- L0：所选 SDK 或 Demo、适用的版本/ref/commit、依赖解析、公共入口，以及编译/静态检查/schema 约束正确；静态反查未出现 `.env` 读取、AK 回显或手工 AK 输入路径。
+- L1：目标消费方或 example 声明的 release/production 构建、打包或平台等价步骤通过，必要运行资产可定位；构建不以运行时凭证是否存在来裁剪 SDK 功能。
+- L2：目标运行形态已通过其明确声明的凭证路径启动入口启动；当前项目目录下 `.env` 的绝对路径已作为不透明输入实际传入。目标可从外部观察，相关状态、日志、健康信号或 UI 无阻断错误；已返回可操作入口和停止、复位或断开方式。
+- L3：用户在真实凭证、网络、权限与目标设备/运行环境中验证目标业务场景和资源释放。
 
 只声明实际达到的层级。`run-demo` 的默认自动完成边界是 L2；用户尚未操作时不得声称 L3。缺少 CLI、网络、权限、运行时或设备时，报告对应层 `BLOCKED`，不要用 mock 或不相干的存活信号冒充真实成功。

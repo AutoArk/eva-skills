@@ -130,16 +130,16 @@ test("counts the credential launcher build as the single build", () => {
   assert.throws(() => validateCliProtocol(documents), /as the single build/);
 });
 
-test("requires the skill entrypoint to prefer the credential launcher", () => {
+test("requires the skill entrypoint to use the CLI credential launcher for local real starts", () => {
   const documents = cloneDocuments();
   documents.skill = documents.skill.replace(
-    "默认必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口",
+    "本地真实启动必须完整执行 EVA CLI 凭证流程并选择凭证路径启动入口",
     "可以任选启动入口",
   );
-  assert.throws(() => validateCliProtocol(documents), /must prefer the credential launcher/);
+  assert.throws(() => validateCliProtocol(documents), /must require the CLI credential launcher/);
 });
 
-test("requires run-demo to select the AK launcher before execution", () => {
+test("requires run-demo to select the CLI credential launcher before execution", () => {
   const documents = cloneDocuments();
   documents.runDemo = documents.runDemo.replace(
     "默认启动入口立即确定为凭证路径启动入口",
@@ -147,7 +147,7 @@ test("requires run-demo to select the AK launcher before execution", () => {
   );
   assert.throws(
     () => validateCliProtocol(documents),
-    /must choose the credential launcher unless runtime AK input was explicitly requested/,
+    /must choose the CLI credential launcher without a manual AK fallback/,
   );
 });
 

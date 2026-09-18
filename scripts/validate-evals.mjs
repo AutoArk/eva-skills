@@ -14,6 +14,7 @@ const catalogs = new Set([
   "multiple-demos",
   "not-used",
   "single-cmake-demo",
+  "single-local-npm-demo",
   "single-npm-demo",
   "single-pub-demo",
 ]);
@@ -22,6 +23,7 @@ const sdkCatalogs = new Set([
   "multiple-sdks",
   "not-used",
   "single-cpp-sdk",
+  "single-local-sdk",
   "single-sdk",
 ]);
 const integrationSources = new Set(["direct-sdk", "example", "existing-project", "not-applicable"]);
@@ -47,9 +49,17 @@ const keySaveModes = new Set(["error", "not-used", "success"]);
 const canaryModes = new Set(["hidden-file", "none"]);
 const targetProjects = new Set([
   "empty-app",
+  "empty-directory",
   "existing-different-version",
   "none",
   "working-app",
+]);
+const configurationScenarios = new Set([
+  "acoustic-troubleshooting",
+  "not-applicable",
+  "voice-choice",
+  "voice-compatible",
+  "voice-incompatible",
 ]);
 
 const requiredBehaviors = new Set([
@@ -58,11 +68,17 @@ const requiredBehaviors = new Set([
   "build-and-typecheck",
   "check-eva-whoami",
   "count-credential-launcher-build-as-build-check",
+  "create-consumer-application",
+  "create-credential-path-launcher",
   "create-eva-key-with-no-show",
+  "collect-runtime-evidence-before-diagnosis",
+  "distinguish-aec-capability-layer",
   "enter-project-directory",
   "explain-browser-login-human-step",
   "fail-closed-unavailable",
   "keep-target-available",
+  "install-local-package",
+  "list-compatible-voices",
   "list-eva-keys",
   "lock-resolved-exact-version",
   "map-example-to-target",
@@ -76,6 +92,8 @@ const requiredBehaviors = new Set([
   "present-sdk-candidates",
   "preserve-unrelated-files",
   "preserve-installed-sdk-version",
+  "preserve-full-duplex-by-default",
+  "preserve-sdk-defaults",
   "read-example-source-policy",
   "read-sdk-catalog",
   "report-cli-missing",
@@ -84,9 +102,11 @@ const requiredBehaviors = new Set([
   "report-snapshot-identity-change",
   "report-version-conflict",
   "report-selected-sdk",
+  "reject-cross-model-voice",
   "request-cli-install-confirmation",
   "request-demo-workspace-choice",
   "request-version-choice",
+  "require-user-choice-for-capability-degradation",
   "request-candidate-confirmation",
   "request-sdk-selection",
   "return-operation-and-teardown",
@@ -97,22 +117,33 @@ const requiredBehaviors = new Set([
   "require-whoami-recheck-after-login",
   "save-eva-key-to-dotenv",
   "select-github-release-platform-asset",
+  "select-sdk-for-new-project",
   "select-from-catalog",
   "start-eva-login",
   "treat-dotenv-path-as-opaque",
+  "avoid-persisting-local-demo-override",
   "use-native-lockfile",
   "use-cmake-package-config",
   "use-public-api-only",
+  "use-cli-for-real-start",
+  "use-sourced-tuning-values",
   "use-task-temp-demo-workspace",
   "use-user-selected-demo-workspace",
   "verify-empty-demo-destination",
   "verify-github-release-checksum",
+  "validate-local-package-identity",
+  "validate-model-parameter-group",
+  "verify-local-package-checksum",
+  "verify-local-package-dependencies",
   "pin-resolved-example-commit",
   "wait-for-browser-login",
   "wait-for-cli-install-confirmation",
   "wait-for-demo-workspace-choice",
   "wait-for-confirmation",
   "wait-for-sdk-selection",
+  "wait-for-voice-selection",
+  "revalidate-dependent-model-parameters",
+  "build-without-runtime-credential",
 ]);
 
 const forbiddenBehaviors = new Set([
@@ -124,6 +155,10 @@ const forbiddenBehaviors = new Set([
   "create-eva-key-when-existing",
   "create-eva-key-without-no-show-key",
   "copy-demo-wholesale",
+  "create-manual-ak-input",
+  "claim-root-cause-from-static-config",
+  "default-to-half-duplex",
+  "degrade-capability-without-user-choice",
   "echo-ak-value",
   "follow-branch-after-pin",
   "infer-uncataloged-route",
@@ -133,8 +168,14 @@ const forbiddenBehaviors = new Set([
   "invoke-cli-before-confirmation",
   "invoke-eva-sdk-workflow",
   "modify-unrelated-file",
+  "modify-before-voice-selection",
+  "mix-model-and-voice",
+  "invent-acoustic-value",
   "overwrite-nonempty-demo-workspace",
   "prebuild-before-build-capable-launcher",
+  "persist-local-demo-override",
+  "query-registry-for-local-package",
+  "reuse-mismatched-local-dependency-tree",
   "read-dotenv-file",
   "repeat-candidate-confirmation",
   "request-user-paste-ak",
@@ -150,6 +191,7 @@ const forbiddenBehaviors = new Set([
   "start-without-credential-path-after-key-success",
   "skip-cli-because-runtime-input-exists",
   "treat-credentialless-build-as-demo-start",
+  "gate-build-on-runtime-credential",
   "use-example-prerelease-tag",
   "use-example-version-for-direct-integration",
   "use-github-source-archive",
@@ -157,6 +199,7 @@ const forbiddenBehaviors = new Set([
   "use-sdk-internal",
   "leave-floating-latest",
   "skip-release-checksum",
+  "skip-local-package-checksum",
   "upgrade-existing-sdk-without-request",
   "use-obsolete-eva-init",
   "use-obsolete-eva-key-path",
@@ -198,6 +241,7 @@ export function validateEvalSpec(spec) {
   const demoWorkspaceCoverage = new Set();
   const sdkCatalogCoverage = new Set();
   const integrationSourceCoverage = new Set();
+  const configurationScenarioCoverage = new Set();
   const requiredCoverage = new Set();
   const forbiddenCoverage = new Set();
   let hasUnavailableCatalog = false;
@@ -218,9 +262,7 @@ export function validateEvalSpec(spec) {
 
     const fixture = evalCase.fixture;
     assertRecord(fixture, `${evalCase.id}.fixture`);
-    assertExactKeys(
-      fixture,
-      [
+    const fixtureKeys = [
         "catalog",
         "sdkCatalog",
         "integrationSource",
@@ -231,7 +273,11 @@ export function validateEvalSpec(spec) {
         "keySave",
         "akCanary",
         "targetProject",
-      ],
+      ];
+    if (Object.hasOwn(fixture, "configurationScenario")) fixtureKeys.push("configurationScenario");
+    assertExactKeys(
+      fixture,
+      fixtureKeys,
       `${evalCase.id}.fixture`,
     );
     assert(catalogs.has(fixture.catalog), `${evalCase.id}: unsupported catalog fixture ${fixture.catalog}`);
@@ -253,6 +299,11 @@ export function validateEvalSpec(spec) {
     assert(keySaveModes.has(fixture.keySave), `${evalCase.id}: unsupported keySave fixture ${fixture.keySave}`);
     assert(canaryModes.has(fixture.akCanary), `${evalCase.id}: unsupported akCanary fixture ${fixture.akCanary}`);
     assert(targetProjects.has(fixture.targetProject), `${evalCase.id}: unsupported targetProject ${fixture.targetProject}`);
+    const configurationScenario = fixture.configurationScenario ?? "not-applicable";
+    assert(
+      configurationScenarios.has(configurationScenario),
+      `${evalCase.id}: unsupported configurationScenario ${configurationScenario}`,
+    );
 
     const expected = evalCase.expected;
     assertRecord(expected, `${evalCase.id}.expected`);
@@ -273,6 +324,7 @@ export function validateEvalSpec(spec) {
     demoWorkspaceCoverage.add(fixture.demoWorkspace);
     sdkCatalogCoverage.add(fixture.sdkCatalog);
     integrationSourceCoverage.add(fixture.integrationSource);
+    configurationScenarioCoverage.add(configurationScenario);
     expected.required.forEach((behavior) => requiredCoverage.add(behavior));
     expected.forbidden.forEach((behavior) => forbiddenCoverage.add(behavior));
     if (fixture.catalog === "missing-requested-route") hasUnavailableCatalog = true;
@@ -334,6 +386,11 @@ export function validateEvalSpec(spec) {
     integrationSourceCoverage,
     "integration source",
   );
+  assertSetCovered(
+    new Set(["acoustic-troubleshooting", "voice-choice", "voice-compatible", "voice-incompatible"]),
+    configurationScenarioCoverage,
+    "configuration scenario",
+  );
   assertSetCovered(requiredBehaviors, requiredCoverage, "required behavior");
   assertSetCovered(forbiddenBehaviors, forbiddenCoverage, "forbidden behavior");
   assert(hasUnavailableCatalog, "evals must cover an unavailable catalog route");
@@ -355,6 +412,7 @@ export function validateEvalSpec(spec) {
 
 function validateCaseSemantics(evalCase) {
   const { fixture, expected, id } = evalCase;
+  const configurationScenario = fixture.configurationScenario ?? "not-applicable";
   const awaitsCandidateConfirmation = ["ambiguous", "identity-changed", "unique-unconfirmed"].includes(
     fixture.selection,
   );
@@ -693,7 +751,10 @@ function validateCaseSemantics(evalCase) {
       assert(expected.required.includes("fail-closed-unavailable"), `${id}: unpublished SDK must fail closed`);
       assert(expected.forbidden.includes("infer-unpublished-sdk"), `${id}: unpublished SDK inference must be forbidden`);
     }
-    if (fixture.sdkCatalog === "single-sdk" && fixture.targetProject === "empty-app") {
+    if (
+      fixture.sdkCatalog === "single-sdk"
+      && ["empty-app", "empty-directory"].includes(fixture.targetProject)
+    ) {
       assert(
         expected.required.includes("resolve-latest-from-official-distribution"),
         `${id}: new direct integration must resolve latest`,
@@ -702,6 +763,23 @@ function validateCaseSemantics(evalCase) {
         expected.required.includes("lock-resolved-exact-version"),
         `${id}: new direct integration must lock the resolved version`,
       );
+    }
+    if (fixture.targetProject === "empty-directory") {
+      for (const behavior of [
+        "create-consumer-application",
+        "select-sdk-for-new-project",
+        "build-without-runtime-credential",
+      ]) {
+        assert(expected.required.includes(behavior), `${id}: empty-directory integration requires ${behavior}`);
+      }
+      for (const behavior of ["create-manual-ak-input", "gate-build-on-runtime-credential"]) {
+        assert(expected.forbidden.includes(behavior), `${id}: empty-directory integration must forbid ${behavior}`);
+      }
+      if (fixture.keySave === "success") {
+        for (const behavior of ["create-credential-path-launcher", "use-cli-for-real-start"]) {
+          assert(expected.required.includes(behavior), `${id}: empty-directory real start requires ${behavior}`);
+        }
+      }
     }
     if (fixture.sdkCatalog === "single-sdk" && fixture.targetProject === "existing-different-version") {
       assert(
@@ -727,6 +805,19 @@ function validateCaseSemantics(evalCase) {
         assert(expected.forbidden.includes(behavior), `${id}: direct C++ integration must forbid ${behavior}`);
       }
     }
+    if (fixture.sdkCatalog === "single-local-sdk") {
+      for (const behavior of [
+        "validate-local-package-identity",
+        "verify-local-package-checksum",
+        "install-local-package",
+        "lock-resolved-exact-version",
+      ]) {
+        assert(expected.required.includes(behavior), `${id}: direct local SDK integration requires ${behavior}`);
+      }
+      for (const behavior of ["query-registry-for-local-package", "skip-local-package-checksum"]) {
+        assert(expected.forbidden.includes(behavior), `${id}: direct local SDK integration must forbid ${behavior}`);
+      }
+    }
   }
   if (fixture.catalog === "single-cmake-demo") {
     for (const behavior of [
@@ -738,6 +829,25 @@ function validateCaseSemantics(evalCase) {
     }
     for (const behavior of ["use-github-source-archive", "skip-release-checksum"]) {
       assert(expected.forbidden.includes(behavior), `${id}: CMake Demo must forbid ${behavior}`);
+    }
+  }
+  if (fixture.catalog === "single-local-npm-demo") {
+    for (const behavior of [
+      "validate-local-package-identity",
+      "verify-local-package-checksum",
+      "verify-local-package-dependencies",
+      "install-local-package",
+      "avoid-persisting-local-demo-override",
+    ]) {
+      assert(expected.required.includes(behavior), `${id}: local npm Demo requires ${behavior}`);
+    }
+    for (const behavior of [
+      "query-registry-for-local-package",
+      "skip-local-package-checksum",
+      "reuse-mismatched-local-dependency-tree",
+      "persist-local-demo-override",
+    ]) {
+      assert(expected.forbidden.includes(behavior), `${id}: local npm Demo must forbid ${behavior}`);
     }
   }
   if (fixture.integrationSource === "existing-project") {
@@ -760,6 +870,53 @@ function validateCaseSemantics(evalCase) {
     assert(expected.required.includes("report-version-conflict"), `${id}: version conflict must be reported`);
     assert(expected.required.includes("request-version-choice"), `${id}: version choice must be requested`);
     assert(expected.forbidden.includes("silently-change-sdk-version"), `${id}: silent version change must be forbidden`);
+  }
+  if (configurationScenario === "voice-choice") {
+    assert(expected.route === "customize", `${id}: voice choice must route to customize`);
+    assert(expected.outcome === "needs-confirmation", `${id}: voice choice must wait for user selection`);
+    for (const behavior of ["validate-model-parameter-group", "list-compatible-voices", "wait-for-voice-selection"]) {
+      assert(expected.required.includes(behavior), `${id}: voice choice requires ${behavior}`);
+    }
+    for (const behavior of ["mix-model-and-voice", "modify-before-voice-selection"]) {
+      assert(expected.forbidden.includes(behavior), `${id}: voice choice must forbid ${behavior}`);
+    }
+  }
+  if (configurationScenario === "voice-incompatible") {
+    assert(expected.route === "customize", `${id}: incompatible voice must route to customize`);
+    assert(expected.outcome === "blocked", `${id}: incompatible voice must block`);
+    for (const behavior of ["validate-model-parameter-group", "reject-cross-model-voice"]) {
+      assert(expected.required.includes(behavior), `${id}: incompatible voice requires ${behavior}`);
+    }
+    assert(expected.forbidden.includes("mix-model-and-voice"), `${id}: incompatible voice must not be applied`);
+  }
+  if (configurationScenario === "voice-compatible") {
+    assert(expected.route === "customize", `${id}: compatible voice must route to customize`);
+    assert(expected.outcome === "complete", `${id}: compatible voice should complete after validation`);
+    for (const behavior of ["validate-model-parameter-group", "revalidate-dependent-model-parameters"]) {
+      assert(expected.required.includes(behavior), `${id}: compatible voice requires ${behavior}`);
+    }
+    assert(expected.forbidden.includes("mix-model-and-voice"), `${id}: compatible voice must retain model pairing`);
+  }
+  if (configurationScenario === "acoustic-troubleshooting") {
+    assert(expected.route === "customize", `${id}: acoustic troubleshooting must route to customize`);
+    for (const behavior of [
+      "distinguish-aec-capability-layer",
+      "collect-runtime-evidence-before-diagnosis",
+      "preserve-full-duplex-by-default",
+      "require-user-choice-for-capability-degradation",
+      "use-sourced-tuning-values",
+      "preserve-sdk-defaults",
+    ]) {
+      assert(expected.required.includes(behavior), `${id}: acoustic troubleshooting requires ${behavior}`);
+    }
+    for (const behavior of [
+      "invent-acoustic-value",
+      "claim-root-cause-from-static-config",
+      "default-to-half-duplex",
+      "degrade-capability-without-user-choice",
+    ]) {
+      assert(expected.forbidden.includes(behavior), `${id}: acoustic troubleshooting must forbid ${behavior}`);
+    }
   }
 }
 

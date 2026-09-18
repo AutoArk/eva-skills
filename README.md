@@ -34,7 +34,7 @@ npx skills update <skill-name>
 
 | Skill | 能力概览 |
 | --- | --- |
-| `eva-sdk` | 定位 EVA SDK 与官方 Demo，支持 SDK 接入、Demo 运行、EVA CLI 凭证流程、定制与验证排障。 |
+| `eva-sdk` | 定位 EVA SDK 与官方 Demo，支持创建或接入消费方应用、Demo 运行、EVA CLI 凭证流程、定制与验证排障。 |
 
 <details>
 <summary><code>eva-sdk</code> 详细说明</summary>
@@ -49,7 +49,7 @@ CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 
 ### 能力边界
 
-- 直接从已发布 SDK 接入现有应用，不要求先运行 Demo。
+- 直接从已发布 SDK 创建新的消费方应用或接入现有应用，不要求先运行 Demo。
 - 根据用户提供的 SDK、语言和平台条件定位候选 Demo。请求已明确 example id 与绝对空目录且匹配同一 immutable snapshot 时直接复用该授权；缺少目录、存在歧义、冻结 commit 或本地 snapshot 身份变化、目录非空时再确认。远端 branch 后续移动不改变已冻结的本地 snapshot。
 - 通过 EVA CLI 完成登录状态检查、key 选择或安全创建，并在项目目录保存 `.env`；agent 禁止读取该文件，只把绝对路径传给启动参数。
 - 根据目标发布物、example 和平台选择依赖恢复、构建、运行与验证方式，不把 TypeScript 工具链泛化为所有 SDK 的固定流程。
@@ -63,7 +63,7 @@ CI 或其他非交互环境可在安装命令后追加 `--copy --yes`。
 | Client SDK | Flutter / Android、iOS | [`autoark_eva_client_sdk`](https://pub.dev/packages/autoark_eva_client_sdk) |
 | Client SDK | C++ / macOS ARM64、Linux ARM64 | [`EvaClient` GitHub Releases](https://github.com/AutoArk/eva-cpp-sdk-release/releases) |
 
-SDK catalog 不保存版本号。依赖选择由各 source/distribution 的 `resolution` 控制；默认从官方 distribution 的 `latest` channel 解析精确版本并锁定，测试时可临时指定 examples tag/branch 或 SDK 精确版本。模式说明见 [`dependency-resolution.md`](skills/eva-sdk/dependency-resolution.md)。
+SDK catalog 不保存版本号。依赖选择由各 source/distribution 的 `resolution` 控制；默认从官方 distribution 的 `latest` channel 解析精确版本并锁定，测试时可临时指定 examples tag/branch、SDK 精确版本或带完整身份校验的本地 npm 包。模式说明见 [`dependency-resolution.md`](skills/eva-sdk/dependency-resolution.md)。
 
 ### 设计说明
 

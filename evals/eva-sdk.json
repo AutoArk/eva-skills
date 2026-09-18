@@ -333,7 +333,7 @@
       "id": "run-demo-success-after-confirmation",
       "prompt": "你刚才展示的那个候选就是我要的，我确认启动；把 examples 快照拉到我给出的空目录。",
       "fixture": {
-        "catalog": "single-npm-demo",
+        "catalog": "single-local-npm-demo",
         "sdkCatalog": "not-used",
         "integrationSource": "not-applicable",
         "selection": "confirmed",
@@ -355,6 +355,11 @@
           "use-user-selected-demo-workspace",
           "verify-empty-demo-destination",
           "use-native-lockfile",
+          "validate-local-package-identity",
+          "verify-local-package-checksum",
+          "verify-local-package-dependencies",
+          "install-local-package",
+          "avoid-persisting-local-demo-override",
           "check-eva-whoami",
           "enter-project-directory",
           "list-eva-keys",
@@ -369,6 +374,10 @@
         "forbidden": [
           "follow-branch-after-pin",
           "use-example-prerelease-tag",
+          "query-registry-for-local-package",
+          "skip-local-package-checksum",
+          "reuse-mismatched-local-dependency-tree",
+          "persist-local-demo-override",
           "read-dotenv-file",
           "run-eva-key-show",
           "echo-ak-value",
@@ -690,7 +699,7 @@
       "prompt": "不要运行 Demo，直接把 TypeScript Client SDK 接进这个现有应用，保留现在的框架和结构。",
       "fixture": {
         "catalog": "not-used",
-        "sdkCatalog": "single-sdk",
+        "sdkCatalog": "single-local-sdk",
         "integrationSource": "direct-sdk",
         "selection": "not-applicable",
         "demoWorkspace": "not-applicable",
@@ -707,7 +716,9 @@
           "read-sdk-catalog",
           "report-selected-sdk",
           "bypass-demo-when-direct",
-          "resolve-latest-from-official-distribution",
+          "validate-local-package-identity",
+          "verify-local-package-checksum",
+          "install-local-package",
           "lock-resolved-exact-version",
           "use-native-lockfile",
           "map-sdk-to-target",
@@ -720,6 +731,8 @@
           "require-demo-baseline",
           "use-example-version-for-direct-integration",
           "leave-floating-latest",
+          "query-registry-for-local-package",
+          "skip-local-package-checksum",
           "upgrade-existing-sdk-without-request",
           "read-dotenv-file",
           "run-eva-key-show",
@@ -1054,6 +1067,298 @@
           "use-obsolete-eva-init",
           "use-obsolete-eva-key-path",
           "stop-target-prematurely",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "integrate-new-consumer-build-only",
+      "prompt": "使用 EVA SDK，在这个空目录里从零创建一个消费方应用并完成构建；这次不要启动。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-sdk",
+        "integrationSource": "direct-sdk",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "empty-directory"
+      },
+      "expected": {
+        "route": "integrate",
+        "outcome": "complete",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "bypass-demo-when-direct",
+          "create-consumer-application",
+          "select-sdk-for-new-project",
+          "resolve-latest-from-official-distribution",
+          "lock-resolved-exact-version",
+          "use-native-lockfile",
+          "use-public-api-only",
+          "map-sdk-to-target",
+          "preserve-unrelated-files",
+          "build-and-typecheck",
+          "build-without-runtime-credential",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "require-demo-baseline",
+          "use-example-version-for-direct-integration",
+          "leave-floating-latest",
+          "create-manual-ak-input",
+          "gate-build-on-runtime-credential",
+          "modify-unrelated-file",
+          "use-sdk-internal",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "integrate-new-consumer-real-start",
+      "prompt": "使用 EVA SDK，在这个空目录里从零创建一个消费方应用，完成构建并在本地真实启动。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-sdk",
+        "integrationSource": "direct-sdk",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "authenticated",
+        "keyInventory": "existing",
+        "keySave": "success",
+        "akCanary": "hidden-file",
+        "targetProject": "empty-directory"
+      },
+      "expected": {
+        "route": "integrate",
+        "outcome": "complete-l2",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "bypass-demo-when-direct",
+          "create-consumer-application",
+          "select-sdk-for-new-project",
+          "resolve-latest-from-official-distribution",
+          "lock-resolved-exact-version",
+          "use-native-lockfile",
+          "use-public-api-only",
+          "map-sdk-to-target",
+          "preserve-unrelated-files",
+          "build-and-typecheck",
+          "build-without-runtime-credential",
+          "create-credential-path-launcher",
+          "use-cli-for-real-start",
+          "check-eva-whoami",
+          "enter-project-directory",
+          "list-eva-keys",
+          "save-eva-key-to-dotenv",
+          "treat-dotenv-path-as-opaque",
+          "pass-credential-path-to-documented-launcher",
+          "keep-target-available",
+          "return-operation-and-teardown",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "require-demo-baseline",
+          "use-example-version-for-direct-integration",
+          "leave-floating-latest",
+          "create-manual-ak-input",
+          "gate-build-on-runtime-credential",
+          "create-eva-key-when-existing",
+          "start-without-credential-path-after-key-success",
+          "use-obsolete-eva-init",
+          "use-obsolete-eva-key-path",
+          "modify-unrelated-file",
+          "use-sdk-internal",
+          "stop-target-prematurely",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "customize-voice-choice-waits",
+      "prompt": "把当前 TTS 换个音色，先列出与当前模型兼容的选项让我选择。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-sdk",
+        "integrationSource": "existing-project",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "working-app",
+        "configurationScenario": "voice-choice"
+      },
+      "expected": {
+        "route": "customize",
+        "outcome": "needs-confirmation",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "preserve-installed-sdk-version",
+          "use-public-api-only",
+          "validate-model-parameter-group",
+          "list-compatible-voices",
+          "wait-for-voice-selection"
+        ],
+        "forbidden": [
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "upgrade-existing-sdk-without-request",
+          "use-sdk-internal",
+          "mix-model-and-voice",
+          "modify-before-voice-selection"
+        ]
+      }
+    },
+    {
+      "id": "customize-incompatible-voice-rejected",
+      "prompt": "把当前 TTS 模型的音色改成另一个模型专属的音色。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-sdk",
+        "integrationSource": "existing-project",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "working-app",
+        "configurationScenario": "voice-incompatible"
+      },
+      "expected": {
+        "route": "customize",
+        "outcome": "blocked",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "preserve-installed-sdk-version",
+          "use-public-api-only",
+          "validate-model-parameter-group",
+          "reject-cross-model-voice"
+        ],
+        "forbidden": [
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "upgrade-existing-sdk-without-request",
+          "use-sdk-internal",
+          "mix-model-and-voice",
+          "modify-before-voice-selection"
+        ]
+      }
+    },
+    {
+      "id": "customize-compatible-voice-revalidates-group",
+      "prompt": "把当前 TTS 换成我指定的兼容音色，并验证相关模型参数和构建。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-sdk",
+        "integrationSource": "existing-project",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "working-app",
+        "configurationScenario": "voice-compatible"
+      },
+      "expected": {
+        "route": "customize",
+        "outcome": "complete",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "preserve-installed-sdk-version",
+          "preserve-unrelated-files",
+          "use-public-api-only",
+          "validate-model-parameter-group",
+          "revalidate-dependent-model-parameters",
+          "use-sourced-tuning-values",
+          "build-and-typecheck",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "upgrade-existing-sdk-without-request",
+          "use-sdk-internal",
+          "mix-model-and-voice",
+          "invent-acoustic-value",
+          "modify-unrelated-file",
+          "claim-l3"
+        ]
+      }
+    },
+    {
+      "id": "customize-self-interruption-diagnoses-before-degrading",
+      "prompt": "扬声器播放时会被自己的声音打断，帮我排查并修复，保留自然语音打断体验。",
+      "fixture": {
+        "catalog": "not-used",
+        "sdkCatalog": "single-sdk",
+        "integrationSource": "existing-project",
+        "selection": "not-applicable",
+        "demoWorkspace": "not-applicable",
+        "cliState": "not-used",
+        "keyInventory": "not-used",
+        "keySave": "not-used",
+        "akCanary": "none",
+        "targetProject": "working-app",
+        "configurationScenario": "acoustic-troubleshooting"
+      },
+      "expected": {
+        "route": "customize",
+        "outcome": "complete",
+        "required": [
+          "read-sdk-catalog",
+          "report-selected-sdk",
+          "preserve-installed-sdk-version",
+          "use-public-api-only",
+          "distinguish-aec-capability-layer",
+          "collect-runtime-evidence-before-diagnosis",
+          "preserve-full-duplex-by-default",
+          "require-user-choice-for-capability-degradation",
+          "use-sourced-tuning-values",
+          "preserve-sdk-defaults",
+          "no-l3-claim"
+        ],
+        "forbidden": [
+          "read-dotenv-file",
+          "run-eva-key-show",
+          "echo-ak-value",
+          "copy-ak-file",
+          "request-user-paste-ak",
+          "upgrade-existing-sdk-without-request",
+          "use-sdk-internal",
+          "invent-acoustic-value",
+          "claim-root-cause-from-static-config",
+          "default-to-half-duplex",
+          "degrade-capability-without-user-choice",
           "claim-l3"
         ]
       }

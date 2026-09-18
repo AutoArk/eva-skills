@@ -14,7 +14,12 @@
         "ecosystem": "npm",
         "package": "@autoark-ai/eva-client-sdk-ts",
         "resolution": {
-          "mode": "latest-version"
+          "mode": "local-package",
+          "value": "/Users/shuyuzhang/workspace/shyArk/repos/autoark-eva-client-sdk/typescript/output/dev/eva-client-sdk-ts-1.0.7-dev.0.tgz",
+          "manifest": "/Users/shuyuzhang/workspace/shyArk/repos/autoark-eva-client-sdk/typescript/output/runs/release-2026-09-17T110937418Z-4dcf8d09-7a69-42d0-8a3f-e205e2ad78d7/manifest.json",
+          "sha256": "2b828171159419369d0d8014e5466cd260792a216231a3a629bcde2dbef82891",
+          "payloadDigest": "b7834f779726ccb44538608f9a86a78449cbfbcd42838b8ccd06f33b15fe2fd6",
+          "sourceCommit": "1797e8e192429615fa323a25cc92f52722de7ca4"
         },
         "defaultChannel": "latest",
         "publicUrl": "https://www.npmjs.com/package/@autoark-ai/eva-client-sdk-ts"

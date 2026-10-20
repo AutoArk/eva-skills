@@ -29,8 +29,7 @@ license: MIT
 
 - 依赖模式直接写在 `reference-sources.json` 的 source `resolution` 和 `sdk-catalog.json` 每个 SDK distribution 的 `resolution` 中；可取值、`value` 格式与解析方式见 [dependency-resolution.md](dependency-resolution.md)。
 - 默认值是 examples `latest-tag` 和 SDK `latest-version`；发布前必须恢复为这两个默认值。
-- 不支持用户配置 commit。测试中的 branch 是可变引用；每次任务开始时解析 HEAD，并以实际 commit 冻结该任务的后续读取、确认与运行。当前 examples 在未正式发布期间使用 `main`，上线前恢复 `latest-tag`。
-- 当前 TypeScript SDK 使用 `local-package` 测试 resolution。使用前必须验证配置中的绝对 `.tgz` 路径、release manifest、SHA-256、payload digest、source commit、包名和包内精确版本；任一不一致时停止。正式发布前恢复 `latest-version`。
+- 不支持用户配置 commit。测试中的 branch 是可变引用；每次任务开始时解析 HEAD，并以实际 commit 冻结该任务的后续读取、确认与运行。
 
 ## 外部文档读取方法
 

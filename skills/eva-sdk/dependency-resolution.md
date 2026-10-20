@@ -56,4 +56,4 @@ examples.resolution.mode = latest-tag
 sdk distribution.resolution.mode = latest-version
 ```
 
-发布校验不接受 `tag`、`branch`、`version` 或 `local-package` 作为发布配置。测试 branch 不需要把 commit 写回 catalog；commit 只作为本次运行证据记录。当前未发布 examples 使用 `branch: main`，TypeScript SDK 使用本地包，因此完整发布校验应失败；上线前分别恢复 `latest-tag` 和 `latest-version` 后再执行发布验收。
+发布校验不接受 `tag`、`branch`、`version` 或 `local-package` 作为发布配置。测试 branch 不需要把 commit 写回 catalog；commit 只作为本次运行证据记录。

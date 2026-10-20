@@ -17,8 +17,7 @@ test("accepts the repository SDK catalog without stored versions", () => {
   assert.equal(sdks.length, 4);
   assert.equal(sdks[0].id, "client-sdk-typescript");
   assert.equal(sdks[0].distribution.defaultChannel, "latest");
-  assert.equal(sdks[0].distribution.resolution.mode, "local-package");
-  assert.match(sdks[0].distribution.resolution.value, /eva-client-sdk-ts-1\.0\.7-dev\.0\.tgz$/);
+  assert(sdks.every((sdk) => sdk.distribution.resolution.mode === "latest-version"));
 });
 
 test("accepts the PyPI SDK distribution", () => {
@@ -61,6 +60,7 @@ test("resolves the default channel to an exact registry version", () => {
 
 test("validates the configured local npm package identity and release evidence", () => {
   const sdk = structuredClone(validateSdkCatalog(loadSdkCatalog())[0]);
+  sdk.distribution.resolution = localPackageResolution();
   const artifact = Buffer.from("local npm artifact");
   sdk.distribution.resolution.sha256 = createHash("sha256").update(artifact).digest("hex");
   const releaseManifest = {
@@ -104,9 +104,21 @@ test("validates the configured local npm package identity and release evidence",
 
 test("rejects incomplete local package resolution metadata", () => {
   const catalog = structuredClone(loadSdkCatalog());
+  catalog.sdks[0].distribution.resolution = localPackageResolution();
   delete catalog.sdks[0].distribution.resolution.payloadDigest;
   assert.throws(() => validateSdkCatalog(catalog), /fields must be/);
 });
+
+function localPackageResolution() {
+  return {
+    mode: "local-package",
+    value: "/absolute/sdk.tgz",
+    manifest: "/absolute/manifest.json",
+    sha256: "a".repeat(64),
+    payloadDigest: "b".repeat(64),
+    sourceCommit: "c".repeat(40),
+  };
+}
 
 test("accepts the Pub SDK distribution and resolves its latest release", () => {
   const sdk = validateSdkCatalog(loadSdkCatalog()).find((item) => item.id === "client-sdk-flutter");
